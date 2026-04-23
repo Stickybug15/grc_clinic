@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-background": "#171c1f",
+                    "on-primary-fixed": "#091b37",
+                    "tertiary-container": "#3b2800",
+                    "primary-container": "#1b2b48",
+                    "inverse-on-surface": "#edf1f5",
+                    "on-surface": "#171c1f",
+                    "tertiary-fixed": "#ffdea7",
+                    "surface-bright": "#f6fafe",
+                    "secondary-fixed-dim": "#8ccdff",
+                    "error": "#ba1a1a",
+                    "on-tertiary-fixed": "#271900",
+                    "error-container": "#ffdad6",
+                    "on-primary-fixed-variant": "#374765",
+                    "secondary-container": "#58bcfd",
+                    "surface": "#f6fafe",
+                    "surface-container-low": "#f0f4f8",
+                    "on-primary-container": "#8393b5",
+                    "surface-dim": "#d6dade",
+                    "outline": "#75777e",
+                    "primary-fixed-dim": "#b7c7eb",
+                    "surface-variant": "#dfe3e7",
+                    "on-secondary-fixed": "#001e2f",
+                    "on-surface-variant": "#44474d",
+                    "primary": "#041632",
+                    "secondary": "#006492",
+                    "on-tertiary-fixed-variant": "#594317",
+                    "inverse-primary": "#b7c7eb",
+                    "background": "#f6fafe",
+                    "surface-tint": "#4f5e7e",
+                    "tertiary": "#211500",
+                    "on-primary": "#ffffff",
+                    "surface-container": "#eaeef2",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-fixed-dim": "#e3c28a",
+                    "outline-variant": "#c5c6ce",
+                    "surface-container-high": "#e5e9ed",
+                    "on-secondary-fixed-variant": "#004b6f",
+                    "on-secondary-container": "#004a6d",
+                    "secondary-fixed": "#cae6ff",
+                    "on-secondary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "primary-fixed": "#d7e2ff",
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-surface": "#2c3134",
+                    "surface-container-highest": "#dfe3e7",
+                    "on-tertiary-container": "#ac8e5b",
+                    "on-error": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xs": "8px",
+                    "margin-page": "32px",
+                    "gutter": "16px",
+                    "sm": "16px",
+                    "md": "24px",
+                    "base": "4px",
+                    "lg": "32px",
+                    "xl": "48px"
+            },
+            "fontFamily": {
+                    "table-data": ["Inter"],
+                    "label-caps": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "h1-bold": ["Inter"],
+                    "body-pro": ["Inter"],
+                    "h2-bold": ["Inter"],
+                    "status-badge": ["Inter"]
+            },
+            "fontSize": {
+                    "table-data": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                    "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "h1-bold": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "body-pro": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "h2-bold": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "status-badge": ["12px", {"lineHeight": "12px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        input[type="checkbox"] {
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-[#f2f4f7] font-body-pro text-on-background">
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-white border-r border-slate-200 flex flex-col py-4 z-50">
+<div class="px-6 mb-8 mt-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-slate-800 text-[28px]">health_and_safety</span>
+<h1 class="text-lg font-black text-slate-800 tracking-tight leading-none">GRC CLINIC</h1>
+</div>
+</div>
+<nav class="flex-1 space-y-1 px-3">
+<a class="flex items-center gap-3 px-4 py-4 rounded-lg text-slate-600 hover:bg-slate-100 duration-200 ease-in-out group" href="/dashboard.html">
+<span class="material-symbols-outlined text-[24px]">grid_view</span>
+<span class="font-bold">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-4 rounded-lg text-slate-600 hover:bg-slate-100 duration-200 ease-in-out group" href="/patients.html">
+<span class="material-symbols-outlined text-[24px]">person_add</span>
+<span class="font-bold">Patient Records</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-4 rounded-lg text-slate-600 hover:bg-slate-100 duration-200 ease-in-out group" href="/medicines.html">
+<span class="material-symbols-outlined text-[24px]">medication</span>
+<span class="font-bold">Medicine Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-4 rounded-lg bg-[#9fc5f8] text-slate-800 font-bold duration-200 ease-in-out" href="/consultations.html">
+<span class="material-symbols-outlined text-[24px]" style='font-variation-settings: "FILL" 1;'>assignment</span>
+<span class="font-bold">Consultation / Treatment</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content Canvas -->
+<main class="pl-64 min-h-screen">
+<div class="w-full bg-white/80 backdrop-blur-md border-b border-slate-200 py-6 px-12 mb-8">
+<h1 class="text-[32px] font-bold text-slate-900 text-center">School Clinic Patient Consultation System</h1>
+</div>
+<div class="max-w-[1100px] mx-auto px-12 pb-xl">
+<div class="mb-6">
+<h2 class="text-xl font-bold text-slate-800">Consulation / Treament</h2>
+<div class="h-[1px] bg-slate-300 w-full mt-2"></div>
+</div>
+<!-- Main Form Card -->
+<div class="bg-white border border-slate-300 shadow-sm rounded-sm p-10">
+<form id="form-consultation">
+<div class="mb-6 grid grid-cols-2 gap-8">
+  <div class="flex flex-col">
+     <label class="text-sm font-bold text-slate-800 mb-2">Select Patient</label>
+     <select id="select-patient" name="patient_id" required class="border-slate-300 rounded p-2 text-sm max-w-sm"></select>
+  </div>
+  <div class="flex flex-col">
+     <label class="text-sm font-bold text-slate-800 mb-2">Symptoms</label>
+     <input type="text" name="symptoms" required placeholder="e.g. Fever, Headache" class="border-slate-300 rounded p-2 text-sm w-full">
+  </div>
+</div>
+<!-- Treatment Provided Section -->
+<div class="mb-10">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-sm font-bold text-slate-800">Treatment Provided</h3>
+<button class="bg-[#0070c0] text-white px-6 py-2 rounded text-xs font-bold hover:bg-[#005ea1] transition-colors" type="submit">Save Consultation</button>
+</div>
+<div class="border border-slate-300 p-8 rounded-sm">
+<div class="grid grid-cols-3 gap-y-6 max-w-2xl mx-auto">
+<label class="flex items-center gap-3 cursor-pointer group">
+<input name="treatment_option" value="Rest" class="w-5 h-5 text-blue-600 border-slate-400 focus:ring-0" type="checkbox"/>
+<span class="text-[13px] text-slate-700">Rest</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input name="treatment_option" value="First Aid" class="w-5 h-5 text-blue-600 border-slate-400 focus:ring-0" type="checkbox"/>
+<span class="text-[13px] text-slate-700">First Aid</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input name="treatment_option" value="Medication" class="w-5 h-5 text-blue-600 border-slate-400 focus:ring-0" type="checkbox"/>
+<span class="text-[13px] text-slate-700">Medication</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input name="treatment_option" value="Consult" class="w-5 h-5 text-blue-600 border-slate-400 focus:ring-0" type="checkbox"/>
+<span class="text-[13px] text-slate-700">Consult</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input name="treatment_option" value="Referred to Hospital" class="w-5 h-5 text-blue-600 border-slate-400 focus:ring-0" type="checkbox"/>
+<span class="text-[13px] text-slate-700">Referred to Hospital</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input name="treatment_option" value="Sent Home" class="w-5 h-5 text-blue-600 border-slate-400 focus:ring-0" type="checkbox"/>
+<span class="text-[13px] text-slate-700">Sent Home</span>
+</label>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<!-- Left Column: Medicine Dispensed -->
+<div>
+<h3 class="text-sm font-bold text-slate-800 mb-2">Medicine Dispensed</h3>
+<div class="border border-slate-300 rounded-sm overflow-hidden">
+<table class="w-full text-left">
+<thead class="border-b border-slate-300">
+<tr class="text-[13px] font-semibold text-slate-700">
+<th class="px-4 py-2 border-r border-slate-300">Medicine Name</th>
+<th class="px-4 py-2 border-r border-slate-300 text-center">Quantity</th>
+<th class="px-4 py-2 text-center">Dosage</th>
+</tr>
+</thead>
+<tbody class="text-[13px] text-slate-600">
+<tr class="border-b border-slate-200">
+<td class="px-4 py-3 border-r border-slate-300">Paracetamol</td>
+<td class="px-4 py-3 border-r border-slate-300 text-center">1 Tablet</td>
+<td class="px-4 py-3 text-center">Once</td>
+</tr>
+<tr>
+<td class="px-4 py-3 border-r border-slate-300 h-10"></td>
+<td class="px-4 py-3 border-r border-slate-300"></td>
+<td class="px-4 py-3"></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="mt-8">
+<h3 class="text-sm font-bold text-slate-800 mb-2">Follow-up Required</h3>
+<div class="border border-slate-300 p-4 rounded-sm flex items-center gap-8">
+<label class="flex items-center gap-2 cursor-pointer">
+<input name="followup_required" class="w-5 h-5 text-blue-600 border-slate-400 focus:ring-0" type="checkbox"/>
+<span class="text-[13px] text-slate-700">Yes</span>
+</label>
+<div class="relative flex-1">
+<input class="w-full border border-slate-300 rounded px-3 py-2 text-[13px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500" type="text" value="5/30/2026"/>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-xl">calendar_today</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Instructions -->
+<div class="flex flex-col">
+<h3 class="text-sm font-bold text-slate-800 mb-2 invisible">Instructions</h3>
+<div class="flex-1 border border-slate-400 rounded-sm p-4 relative min-h-[240px]">
+<div class="absolute top-0 left-0 right-0 border-b border-slate-400 px-4 py-1.5 bg-white">
+<span class="text-sm font-bold text-slate-800">Instruction / Remarks</span>
+</div>
+<div class="mt-10 text-[13px] text-slate-600 space-y-4">
+<p class="">Advise Patient to rest and drink water.</p>
+<p class="">Monitor for recurring headache and dizziness. If symptoms persist, consult a doctor.</p>
+<textarea name="remarks" class="w-full mt-4 bg-transparent border-none focus:ring-0 resize-none min-h-[100px]" placeholder="Type additional remarks here..."></textarea>
+</div>
+</div>
+</div>
+</div>
+</form>
+</div>
+</div>
+</main>
+<script type="module" src="/src/consultations.ts"></script>
+</body></html>

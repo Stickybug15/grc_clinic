@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Medicine Inventory - School Clinic Patient Consultation System</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+              "primary": "#007BFF",
+              "secondary": "#17A2B8",
+              "success": "#28A745",
+              "warning": "#FFC107",
+              "danger": "#DC3545",
+              "background-alt": "#F8F9FA"
+            },
+            "fontFamily": {
+              "sans": ["Inter", "sans-serif"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .sidebar-item-active {
+            background-color: #A3C9F9;
+            color: #171c1f;
+        }
+        .btn-add {
+            background-color: #007BFF;
+        }
+        .btn-update {
+            background-color: #17A2B8;
+        }
+        .status-available {
+            background-color: #1DBB8E;
+        }
+        .status-low {
+            background-color: #D6A306;
+        }
+        .status-expiring {
+            background-color: #FF3B30;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800 min-h-screen">
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-white border-r border-slate-200 flex flex-col z-50">
+<div class="p-6 mb-4 flex items-center justify-center">
+<!-- Logo or placeholder -->
+<div class="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-600">health_and_safety</span>
+</div>
+</div>
+<nav class="flex-1 px-0 space-y-0">
+<a class="flex items-center gap-4 px-6 py-4 text-slate-700 hover:bg-slate-50 transition-colors" href="/dashboard.html">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="font-bold">Dashboard</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-4 text-slate-700 hover:bg-slate-50 transition-colors" href="/patients.html">
+<span class="material-symbols-outlined text-2xl">person_add</span>
+<span class="font-bold">Patient Records</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-4 sidebar-item-active font-bold" href="/medicines.html">
+<span class="material-symbols-outlined">medication</span>
+<span class="font-bold">Medicine Inventory</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-4 text-slate-700 hover:bg-slate-50 transition-colors" href="/consultations.html">
+<span class="material-symbols-outlined">assignment</span>
+<span class="font-bold text-sm leading-tight">Consultation / Treatment</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 p-8 min-h-screen bg-[#F5F7F9]">
+<!-- Page Header -->
+<header class="mb-12 text-center">
+<h1 class="text-4xl font-bold text-slate-900 tracking-tight">School Clinic Patient Consultation System</h1>
+</header>
+<!-- Sub Header Section -->
+<div class="flex justify-between items-center mb-6 px-4">
+<h2 class="text-2xl font-bold text-slate-800">Medicine Inventory</h2>
+<div class="flex gap-3">
+<button id="btn-add-medicine" class="btn-add text-white px-6 py-2 rounded-sm font-semibold flex items-center gap-2 text-sm">
+<span class="material-symbols-outlined text-lg">add</span>
+                Add Medicine
+            </button>
+<button id="btn-update-stock" class="btn-update text-white px-6 py-2 rounded-sm font-semibold flex items-center gap-2 text-sm">
+<span class="material-symbols-outlined text-lg">sync</span>
+                Update Stock
+            </button>
+</div>
+</div>
+<div class="bg-white rounded-lg shadow-sm overflow-hidden border border-slate-200">
+<!-- Search Bar -->
+<div class="p-6 border-b border-slate-100 flex justify-center">
+<div class="relative w-full">
+<input class="w-full pl-6 pr-12 py-3 bg-white border border-slate-200 rounded-sm text-sm focus:ring-1 focus:ring-blue-500 outline-none placeholder-slate-400" placeholder="Search Medicine..." type="text"/>
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+</div>
+</div>
+<!-- Inventory Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-center border-collapse">
+<thead>
+<tr class="bg-white border-b border-slate-200">
+<th class="px-6 py-6 font-bold text-slate-800 border-r border-slate-200">Medicine Name</th>
+<th class="px-6 py-6 font-bold text-slate-800 border-r border-slate-200">Category</th>
+<th class="px-6 py-6 font-bold text-slate-800 border-r border-slate-200">Quantity</th>
+<th class="px-6 py-6 font-bold text-slate-800 border-r border-slate-200">Expiration Date</th>
+<th class="px-6 py-6 font-bold text-slate-800">Status</th>
+</tr>
+</thead>
+<tbody id="medicines-table-body" class="text-sm text-slate-600">
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="px-6 py-4 flex justify-between items-center border-t border-slate-100 text-sm text-slate-500 font-medium">
+<div>Showing 1 to 3 of 4 entries</div>
+<div class="flex">
+<button class="px-4 py-2 border border-slate-200 rounded-l-sm hover:bg-slate-50">Previous</button>
+<button class="px-4 py-2 border-t border-b border-slate-200 bg-white text-slate-800">1</button>
+<button class="px-4 py-2 border border-slate-200 bg-white text-slate-800">2</button>
+<button class="px-4 py-2 border-t border-b border-slate-200 bg-white text-slate-800">3</button>
+<button class="px-4 py-2 border border-slate-200 bg-white text-slate-800">4</button>
+<button class="px-4 py-2 border border-slate-200 rounded-r-sm hover:bg-slate-50">Next</button>
+</div>
+</div>
+</div>
+<!-- Recent Inventory Movements (Preserved from original but adjusted for style) -->
+<div class="mt-12">
+<div class="flex items-center justify-between mb-4 px-4">
+<h3 class="text-xl font-bold text-slate-800">Recent Inventory Movements</h3>
+<button class="text-blue-600 font-semibold text-sm flex items-center gap-1 hover:underline">
+                View Full Audit Log
+                <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+<div class="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 border-b border-slate-200">
+<th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Timestamp</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Medicine</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Type</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Change</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">User</th>
+</tr>
+</thead>
+<tbody id="inventory-movements-body" class="text-sm text-slate-700">
+</tbody>
+</table>
+</div>
+</div>
+</main>
+<!-- Add Medicine Modal -->
+<div id="add-medicine-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+    <div class="bg-white rounded-lg p-8 w-full max-w-lg shadow-xl relative">
+        <h3 class="text-2xl font-bold mb-6 text-slate-800">Add New Medicine</h3>
+        <form id="form-add-medicine" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="block text-sm font-semibold text-slate-700">Medicine Name</label><input type="text" name="med_name" required class="w-full border border-slate-300 p-2 rounded"></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Generic Name</label><input type="text" name="generic_name" class="w-full border border-slate-300 p-2 rounded"></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Category</label><input type="text" name="category" class="w-full border border-slate-300 p-2 rounded"></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Unit (e.g. mg, tablet)</label><input type="text" name="unit" class="w-full border border-slate-300 p-2 rounded"></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Initial Stock</label><input type="number" name="stock_qty" value="0" required class="w-full border border-slate-300 p-2 rounded"></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Reorder Level</label><input type="number" name="reorder_level" value="10" required class="w-full border border-slate-300 p-2 rounded"></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Expiry Date</label><input type="date" name="expiry_date" class="w-full border border-slate-300 p-2 rounded"></div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" id="btn-close-add-modal" class="px-4 py-2 border border-slate-300 rounded text-slate-700 hover:bg-slate-50 font-semibold">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-[#007BFF] text-white rounded hover:bg-blue-600 font-semibold">Save Medicine</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Update Stock Modal -->
+<div id="update-stock-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+    <div class="bg-white rounded-lg p-8 w-full max-w-sm shadow-xl relative">
+        <h3 class="text-2xl font-bold mb-6 text-slate-800">Update Stock</h3>
+        <form id="form-update-stock" class="space-y-4">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 border-none outline-none">Select Medicine</label>
+                <select id="select-medicine" name="medicine_id" required class="w-full border border-slate-300 p-2 rounded"></select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700">Transaction Type</label>
+                <select name="transaction_type" required class="w-full border border-slate-300 p-2 rounded">
+                    <option value="IN">IN (Restock)</option>
+                    <option value="OUT">OUT (Dispense/Remove)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700">Action Type</label>
+                <select name="action_type" required class="w-full border border-slate-300 p-2 rounded">
+                    <option value="Restock">Restock</option>
+                    <option value="Dispensed">Dispensed</option>
+                    <option value="Expired">Expired</option>
+                    <option value="Correction">Correction</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700">Quantity</label>
+                <input type="number" name="quantity" required min="1" class="w-full border border-slate-300 p-2 rounded">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700">Remarks</label>
+                <input type="text" name="remarks" class="w-full border border-slate-300 p-2 rounded">
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" id="btn-close-upd-modal" class="px-4 py-2 border border-slate-300 rounded text-slate-700 hover:bg-slate-50 font-semibold">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-[#17A2B8] text-white rounded hover:bg-cyan-600 font-semibold">Update</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script type="module" src="/src/medicines.ts"></script>
+</body></html>
