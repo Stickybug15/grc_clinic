@@ -3,7 +3,7 @@ import cors from 'cors';
 import { pool } from './db';
 
 const app = express();
-const PORT = 3000;
+const PORT = 3006;
 
 app.use(cors());
 app.use(express.json());
@@ -61,20 +61,20 @@ app.post('/api/medicines', async (req: Request, res: Response) => {
 app.put('/api/medicines/:id/stock', async (req: Request, res: Response) => {
   const { id } = req.params;
   const { quantity, transaction_type, action_type, remarks } = req.body; // transaction_type: IN/OUT
-  
+
   try {
     await pool.query('START TRANSACTION');
-    
+
     // Insert into ledger
     await pool.query(
       'INSERT INTO stock_ledger (medicine_id, transaction_type, quantity, action_type, remarks) VALUES (?, ?, ?, ?, ?)',
       [id, transaction_type, quantity, action_type, remarks]
     );
-    
+
     // Update stock in medicines table
     const operator = transaction_type === 'IN' ? '+' : '-';
     await pool.query(`UPDATE medicines SET stock_qty = stock_qty ${operator} ? WHERE medicine_id = ?`, [quantity, id]);
-    
+
     await pool.query('COMMIT');
     res.json({ message: 'Stock updated successfully' });
   } catch (error) {

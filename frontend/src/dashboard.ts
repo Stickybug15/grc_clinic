@@ -1,8 +1,7 @@
-import { fetchPatients, fetchMedicines, fetchConsultations } from './api';
+import { fetchMedicines, fetchConsultations } from './api';
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        const patients = await fetchPatients();
         const consultations = await fetchConsultations();
         const medicines = await fetchMedicines();
 

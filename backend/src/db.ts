@@ -5,7 +5,7 @@ export const pool = mysql.createPool({
   host: 'localhost',
   user: 'root',
   password: '', // Assuming default XAMPP no password
-  database: 'school_clinic',
+  database: 'grc_clinic_db',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
