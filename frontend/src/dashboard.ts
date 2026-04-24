@@ -8,13 +8,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Stats calculation
         const todayStr = new Date().toISOString().split('T')[0];
         const patientsToday = consultations.filter((c: any) => c.visit_timestamp.startsWith(todayStr)).length;
-        const medsAvailable = medicines.length;
-        const medsLowStock = medicines.filter((m: any) => m.stock_qty <= m.reorder_level).length;
+        const medsAvailable = medicines.filter((m: any) => m.stock_qty > 0).length;
+        const medsLowStock = medicines.filter((m: any) => m.stock_qty > 0 && m.stock_qty <= m.reorder_threshold).length;
         
         // Simple logic for expiring soon: within 30 days
         const thirtyDaysFromNow = new Date();
         thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-        const medsExpiring = medicines.filter((m: any) => new Date(m.expiry_date) <= thirtyDaysFromNow).length;
+        const medsExpiring = medicines.filter((m: any) => m.stock_qty > 0 && new Date(m.expiry_date) <= thirtyDaysFromNow).length;
 
         // Render stats
         document.getElementById('stat-patients-today')!.textContent = String(patientsToday);
@@ -39,13 +39,81 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Render Alerts
         const alertsContainer = document.getElementById('dashboard-alerts')!;
         alertsContainer.innerHTML = '';
-        medicines.filter((m: any) => m.stock_qty <= m.reorder_level).forEach((m: any) => {
-            alertsContainer.innerHTML += `
-                <div class="flex items-center gap-4 py-4 border-t border-slate-200">
-                    <span class="material-symbols-outlined text-slate-800">error</span>
-                    <p class="text-sm font-semibold text-slate-700">${m.med_name} Stock is low (${m.stock_qty} left)</p>
-                </div>
-            `;
+        
+        // Load dismissed alerts from localStorage
+        const dismissedStr = localStorage.getItem('dismissedAlerts');
+        const dismissedAlerts = dismissedStr ? JSON.parse(dismissedStr) : {};
+        const now = Date.now();
+        
+        // Cleanup expired dismissals (older than 24 hours)
+        Object.keys(dismissedAlerts).forEach(k => {
+            if (now - dismissedAlerts[k] > 86400000) delete dismissedAlerts[k];
+        });
+        localStorage.setItem('dismissedAlerts', JSON.stringify(dismissedAlerts));
+
+        medicines.forEach((m: any) => {
+            if (m.stock_qty <= 0) {
+                // Out of Stock (overrides expiring soon and low stock)
+                const alertKey = `out_of_stock_${m.medicine_id}`;
+                if (!dismissedAlerts[alertKey]) {
+                    alertsContainer.innerHTML += `
+                        <div class="alert-item flex items-center justify-between py-4 border-t border-slate-200" data-alert-key="${alertKey}">
+                            <div class="flex items-center gap-4">
+                                <span class="material-symbols-outlined text-red-600">error</span>
+                                <p class="text-sm font-bold text-red-600">${m.med_name} is Out of Stock!</p>
+                            </div>
+                            <button class="btn-dismiss-alert text-slate-400 hover:text-slate-600" title="Dismiss for 24h"><span class="material-symbols-outlined text-[18px]">close</span></button>
+                        </div>
+                    `;
+                }
+            } else {
+                // Low Stock
+                if (m.stock_qty <= m.reorder_threshold) {
+                    const alertKey = `low_stock_${m.medicine_id}`;
+                    if (!dismissedAlerts[alertKey]) {
+                        alertsContainer.innerHTML += `
+                            <div class="alert-item flex items-center justify-between py-4 border-t border-slate-200" data-alert-key="${alertKey}">
+                                <div class="flex items-center gap-4">
+                                    <span class="material-symbols-outlined text-orange-500">warning</span>
+                                    <p class="text-sm font-semibold text-slate-700">${m.med_name} Stock is low (${m.stock_qty} left)</p>
+                                </div>
+                                <button class="btn-dismiss-alert text-slate-400 hover:text-slate-600" title="Dismiss for 24h"><span class="material-symbols-outlined text-[18px]">close</span></button>
+                            </div>
+                        `;
+                    }
+                }
+                // Expiring Soon
+                if (new Date(m.expiry_date) <= thirtyDaysFromNow) {
+                    const alertKey = `expiring_${m.medicine_id}`;
+                    if (!dismissedAlerts[alertKey]) {
+                        alertsContainer.innerHTML += `
+                            <div class="alert-item flex items-center justify-between py-4 border-t border-slate-200" data-alert-key="${alertKey}">
+                                <div class="flex items-center gap-4">
+                                    <span class="material-symbols-outlined text-amber-500">schedule</span>
+                                    <p class="text-sm font-semibold text-slate-700">${m.med_name} is expiring soon (${new Date(m.expiry_date).toLocaleDateString()})</p>
+                                </div>
+                                <button class="btn-dismiss-alert text-slate-400 hover:text-slate-600" title="Dismiss for 24h"><span class="material-symbols-outlined text-[18px]">close</span></button>
+                            </div>
+                        `;
+                    }
+                }
+            }
+        });
+
+        // Add event listeners for dismiss buttons
+        document.querySelectorAll('.btn-dismiss-alert').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const alertItem = target.closest('.alert-item') as HTMLElement;
+                if (alertItem) {
+                    const key = alertItem.getAttribute('data-alert-key');
+                    if (key) {
+                        dismissedAlerts[key] = Date.now();
+                        localStorage.setItem('dismissedAlerts', JSON.stringify(dismissedAlerts));
+                    }
+                    alertItem.classList.add('hidden');
+                }
+            });
         });
     } catch (e) {
         console.error('Failed to load dashboard data', e);

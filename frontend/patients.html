@@ -66,7 +66,7 @@
 <!-- Patient Records Title & Add Button -->
 <div class="flex justify-between items-end mb-4">
 <h2 class="text-2xl font-bold text-slate-800">Patient Records</h2>
-<button id="btn-add-patient" class="bg-[#10b981] hover:bg-emerald-600 text-white px-4 py-2 rounded flex items-center font-semibold text-sm transition-colors">
+<button id="btn-add-patient" class="bg-[#007BFF] hover:bg-blue-600 text-white px-6 py-2.5 rounded-lg font-bold flex items-center shadow-sm transition-colors group">
 <span class="material-symbols-outlined mr-2 text-xl" data-icon="add">add</span>
                     Add New Patient
                 </button>
@@ -76,12 +76,12 @@
 <!-- Search Bar -->
 <div class="p-6 border-b border-slate-100">
 <div class="relative max-w-full">
-<input class="w-full bg-white border border-slate-200 rounded px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-slate-400" placeholder="Search by name or student ID..." type="text"/>
+<input id="search-input" class="w-full bg-white border border-slate-200 rounded px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-slate-400" placeholder="Search by name or student ID..." type="text"/>
 <span class="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-300 text-2xl" data-icon="search">search</span>
 </div>
 </div>
 <!-- Table Container -->
-<div class="flex-1 overflow-x-auto">
+<div class="flex-1 overflow-x-auto pb-6">
 <table class="w-full text-center border-collapse">
 <thead>
 <tr class="text-slate-900 border-b border-slate-100">
@@ -96,18 +96,6 @@
 </tbody>
 </table>
 </div>
-<!-- Pagination Footer -->
-<div class="p-6 border-t border-slate-100 flex justify-between items-center bg-white">
-<div class="text-sm text-slate-600">Showing 1 to 2 of 8 entries</div>
-<div class="flex items-center border border-slate-300 rounded overflow-hidden divide-x divide-slate-300 text-sm">
-<button class="px-4 py-1.5 hover:bg-slate-50 transition-colors">Previous</button>
-<button class="px-4 py-1.5 bg-slate-50 font-bold">1</button>
-<button class="px-4 py-1.5 hover:bg-slate-50 transition-colors">2</button>
-<button class="px-4 py-1.5 hover:bg-slate-50 transition-colors">3</button>
-<button class="px-4 py-1.5 hover:bg-slate-50 transition-colors">4</button>
-<button class="px-4 py-1.5 hover:bg-slate-50 transition-colors">Next</button>
-</div>
-</div>
 </div>
 </div>
 </header>
@@ -120,18 +108,64 @@
             <div class="grid grid-cols-2 gap-4">
                 <div><label class="block text-sm font-semibold text-slate-700">Student No.</label><input type="text" name="student_no" required class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
                 <div><label class="block text-sm font-semibold text-slate-700">Full Name</label><input type="text" name="full_name" required class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
-                <div><label class="block text-sm font-semibold text-slate-700">Gender</label><select name="gender" class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></div>
-                <div><label class="block text-sm font-semibold text-slate-700">Birth Date</label><input type="date" name="birth_date" class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
-                <div><label class="block text-sm font-semibold text-slate-700">Level / Section</label><input type="text" name="level_section" class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
-                <div><label class="block text-sm font-semibold text-slate-700">Contact No.</label><input type="text" name="contact_no" class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
-                <div><label class="block text-sm font-semibold text-slate-700">Emergency Contact</label><input type="text" name="emergency_contact_name" class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
-                <div><label class="block text-sm font-semibold text-slate-700">Emerg. Contact No.</label><input type="text" name="emergency_contact_no" class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Gender</label><select name="gender" required class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Birth Date</label><input type="date" name="birth_date" required class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Level / Section</label><input type="text" name="level_section" required class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Contact No.</label><input type="number" name="contact_no" required class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Emergency Contact</label><input type="text" name="emergency_contact_name" required class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Emerg. Contact No.</label><input type="number" name="emergency_contact_no" required class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
             </div>
             <div class="flex justify-end space-x-3 mt-6">
                 <button type="button" id="btn-close-modal" class="px-4 py-2 border border-slate-300 rounded text-slate-700 hover:bg-slate-50 font-semibold transition-colors">Cancel</button>
                 <button type="submit" class="px-4 py-2 bg-[#10b981] text-white rounded hover:bg-emerald-600 font-semibold transition-colors">Save Patient</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Edit Patient Modal -->
+<div id="edit-patient-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+    <div class="bg-white rounded-lg p-8 w-full max-w-2xl shadow-xl relative">
+        <h3 class="text-2xl font-bold mb-6 text-slate-800">Edit Patient</h3>
+        <form id="form-edit-patient" class="space-y-4">
+            <input type="hidden" id="edit_patient_id" name="patient_id">
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="block text-sm font-semibold text-slate-700">Student No.</label><input type="text" id="edit_student_no" name="student_no" required class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Full Name</label><input type="text" id="edit_full_name" name="full_name" required class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Gender</label><select id="edit_gender" name="gender" required class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Birth Date</label><input type="date" id="edit_birth_date" name="birth_date" required class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Level / Section</label><input type="text" id="edit_level_section" name="level_section" required class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Contact No.</label><input type="number" id="edit_contact_no" name="contact_no" required class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Emergency Contact</label><input type="text" id="edit_emergency_contact_name" name="emergency_contact_name" required class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Emerg. Contact No.</label><input type="number" id="edit_emergency_contact_no" name="emergency_contact_no" required class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"></div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" id="btn-close-edit-modal" class="px-4 py-2 border border-slate-300 rounded text-slate-700 hover:bg-slate-50 font-semibold transition-colors">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-[#10b981] text-white rounded font-semibold hover:bg-emerald-600 transition-colors">Update Patient</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- View Patient Modal -->
+<div id="view-patient-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+    <div class="bg-white rounded-lg p-8 w-full max-w-2xl shadow-xl relative">
+        <h3 class="text-2xl font-bold mb-6 text-slate-800">Patient Details</h3>
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="block text-sm font-semibold text-slate-700">Student No.</label><div id="view_student_no" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-slate-700 min-h-[40px]"></div></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Full Name</label><div id="view_full_name" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-slate-700 min-h-[40px]"></div></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Gender</label><div id="view_gender" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-slate-700 min-h-[40px]"></div></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Birth Date</label><div id="view_birth_date" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-slate-700 min-h-[40px]"></div></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Level / Section</label><div id="view_level_section" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-slate-700 min-h-[40px]"></div></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Contact No.</label><div id="view_contact_no" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-slate-700 min-h-[40px]"></div></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Emergency Contact</label><div id="view_emergency_contact_name" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-slate-700 min-h-[40px]"></div></div>
+                <div><label class="block text-sm font-semibold text-slate-700">Emerg. Contact No.</label><div id="view_emergency_contact_no" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-slate-700 min-h-[40px]"></div></div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" id="btn-close-view-modal" class="px-4 py-2 border border-slate-300 rounded text-slate-700 hover:bg-slate-50 font-semibold transition-colors">Close</button>
+            </div>
+        </div>
     </div>
 </div>
 <script type="module" src="/src/patients.ts"></script>
