@@ -101,13 +101,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         formAdd.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!confirm("Are you sure you want to save this data?")) return;
+            
             const formData = new FormData(formAdd);
             const data = Object.fromEntries(formData.entries()) as Record<string, any>;
-            data.stock_qty = Number(data.stock_qty);
-            data.reorder_level = Number(data.reorder_level);
             
             try {
+                // Check for duplicates
+                const existingMedicines = await fetchMedicines();
+                const newMedName = String(data.med_name).trim().toLowerCase();
+                const isDuplicate = existingMedicines.some((m: any) => m.med_name.trim().toLowerCase() === newMedName);
+                
+                if (isDuplicate) {
+                    alert("Cannot add medicine: A medicine with this name already exists in the inventory.");
+                    return;
+                }
+
+                if (!confirm("Are you sure you want to save this data?")) return;
+
+                data.stock_qty = Number(data.stock_qty);
+                data.reorder_level = Number(data.reorder_level);
+                
                 await createMedicine(data);
                 modalAdd.classList.add('hidden');
                 formAdd.reset();
