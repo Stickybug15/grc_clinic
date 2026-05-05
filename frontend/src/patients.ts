@@ -73,6 +73,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!confirm("Are you sure you want to save this data?")) return;
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
             
@@ -168,6 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (editForm) {
         editForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!confirm("Are you sure you want to save this data?")) return;
             const formData = new FormData(editForm);
             const data = Object.fromEntries(formData.entries());
             const id = data.patient_id as string;

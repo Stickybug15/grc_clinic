@@ -101,6 +101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         formAdd.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!confirm("Are you sure you want to save this data?")) return;
             const formData = new FormData(formAdd);
             const data = Object.fromEntries(formData.entries()) as Record<string, any>;
             data.stock_qty = Number(data.stock_qty);
@@ -129,6 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         formUpd.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!confirm("Are you sure you want to save this data?")) return;
             const formData = new FormData(formUpd);
             const { medicine_id, transaction_type, quantity, action_type, remarks } = Object.fromEntries(formData.entries());
             
@@ -203,6 +205,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (editMedForm) {
         editMedForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!confirm("Are you sure you want to save this data?")) return;
             const formData = new FormData(editMedForm);
             const data = Object.fromEntries(formData.entries());
             const id = data.medicine_id as string;

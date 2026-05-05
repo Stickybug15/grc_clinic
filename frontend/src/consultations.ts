@@ -107,6 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (addForm) {
         addForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!confirm("Are you sure you want to save this data?")) return;
             const formData = new FormData(addForm);
             
             // Gather treatments
@@ -194,6 +195,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (editForm) {
         editForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!confirm("Are you sure you want to save this data?")) return;
             const formData = new FormData(editForm);
             const id = formData.get('consultation_id') as string;
             
