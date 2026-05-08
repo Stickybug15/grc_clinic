@@ -257,7 +257,7 @@ CREATE TABLE `patients` (
   `middle_name` varchar(50) DEFAULT NULL,
   `level_section` varchar(30) NOT NULL,
   `birth_date` date DEFAULT NULL,
-  `gender` char(1) NOT NULL DEFAULT 'M' CHECK (`gender` in ('M','F','X')),
+  `gender` char(6) NOT NULL DEFAULT 'Male' CHECK (`gender` in ('Male','Female','Other')),
   `guardian_name` varchar(120) DEFAULT NULL,
   `guardian_contact` varchar(20) DEFAULT NULL,
   `medical_background` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT json_object('allergies',json_array(),'conditions',json_array()) CHECK (json_valid(`medical_background`)),
@@ -271,10 +271,10 @@ CREATE TABLE `patients` (
 --
 
 INSERT INTO `patients` (`patient_id`, `student_no`, `first_name`, `last_name`, `middle_name`, `level_section`, `birth_date`, `gender`, `guardian_name`, `guardian_contact`, `medical_background`, `is_enrolled`, `created_at`, `updated_at`) VALUES
-(1, '2024-06-00110', 'Kimpee', 'Aton', NULL, 'BSIT / 3rd Year', '2002-05-10', 'M', NULL, NULL, '{\"allergies\": [], \"conditions\": []}', 1, '2026-04-23 21:12:27', '2026-04-23 21:12:27'),
-(2, '2024-07-00110', 'Geraldyn', 'Castillano', NULL, 'BSIT / 3rd Year', '2003-11-12', 'F', NULL, NULL, '{\"allergies\": [\"Penicillin\"], \"conditions\": []}', 1, '2026-04-23 21:12:27', '2026-04-23 21:12:27'),
-(3, '2024-00301', 'Hanny', 'Cortez', NULL, 'BSIT / 2nd Year', '2004-03-21', 'F', NULL, NULL, '{\"allergies\": [], \"conditions\": [\"Asthma\"]}', 1, '2026-04-23 21:12:27', '2026-04-23 21:12:27'),
-(4, '2024-00402', 'Jerick', 'Isip', NULL, 'BSIT / 2nd Year', '2003-08-14', 'M', NULL, NULL, '{\"allergies\": [], \"conditions\": []}', 1, '2026-04-23 21:12:27', '2026-04-23 21:12:27');
+(1, '2024-06-00110', 'Kimpee', 'Aton', NULL, 'BSIT / 3rd Year', '2002-05-10', 'Male', NULL, NULL, '{\"allergies\": [], \"conditions\": []}', 1, '2026-04-23 21:12:27', '2026-04-23 21:12:27'),
+(2, '2024-07-00110', 'Geraldyn', 'Castillano', NULL, 'BSIT / 3rd Year', '2003-11-12', 'Female', NULL, NULL, '{\"allergies\": [\"Penicillin\"], \"conditions\": []}', 1, '2026-04-23 21:12:27', '2026-04-23 21:12:27'),
+(3, '2024-00301', 'Hanny', 'Cortez', NULL, 'BSIT / 2nd Year', '2004-03-21', 'Female', NULL, NULL, '{\"allergies\": [], \"conditions\": [\"Asthma\"]}', 1, '2026-04-23 21:12:27', '2026-04-23 21:12:27'),
+(4, '2024-00402', 'Jerick', 'Isip', NULL, 'BSIT / 2nd Year', '2003-08-14', 'Male', NULL, NULL, '{\"allergies\": [], \"conditions\": []}', 1, '2026-04-23 21:12:27', '2026-04-23 21:12:27');
 
 -- --------------------------------------------------------
 
