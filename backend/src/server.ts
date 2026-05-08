@@ -229,7 +229,7 @@ app.put('/api/medicines/:id', async (req: Request, res: Response): Promise<any> 
   const { med_name, generic_name, category, unit, reorder_level, expiry_date } = req.body;
   try {
     const [result] = await pool.query(
-      'UPDATE medicines SET med_name = ?, generic_name = ?, category = ?, unit = ?, reorder_level = ?, expiry_date = ? WHERE medicine_id = ?',
+      'UPDATE medicines SET med_name = ?, med_desc = ?, category = ?, unit = ?, reorder_threshold = ?, expiry_date = ? WHERE medicine_id = ?',
       [med_name, generic_name, category, unit, reorder_level, expiry_date, id]
     );
     if ((result as any).affectedRows === 0) return res.status(404).json({ error: 'Medicine not found' });
@@ -242,10 +242,29 @@ app.put('/api/medicines/:id', async (req: Request, res: Response): Promise<any> 
 app.delete('/api/medicines/:id', async (req: Request, res: Response): Promise<any> => {
   const { id } = req.params;
   try {
+    const [medicineRows] = await pool.query('SELECT medicine_id, stock_qty FROM medicines WHERE medicine_id = ?', [id]);
+    if ((medicineRows as any[]).length === 0) {
+      return res.status(404).json({ error: 'Medicine not found' });
+    }
+
+    const medicine = (medicineRows as any[])[0];
+    if (medicine.stock_qty > 0) {
+      return res.status(409).json({ error: 'Cannot delete medicine while stock quantity is greater than zero. Set stock to 0 before deleting.' });
+    }
+
+    await pool.query('START TRANSACTION');
+    await pool.query('DELETE FROM stock_ledger WHERE medicine_id = ?', [id]);
+    await pool.query('DELETE FROM dispensing_records WHERE medicine_id = ?', [id]);
     const [result] = await pool.query('DELETE FROM medicines WHERE medicine_id = ?', [id]);
-    if ((result as any).affectedRows === 0) return res.status(404).json({ error: 'Medicine not found' });
+    if ((result as any).affectedRows === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(404).json({ error: 'Medicine not found' });
+    }
+    await pool.query('COMMIT');
+
     res.json({ message: 'Medicine deleted successfully' });
   } catch (error) {
+    await pool.query('ROLLBACK');
     res.status(500).json({ error: sanitizeError(error) });
   }
 });

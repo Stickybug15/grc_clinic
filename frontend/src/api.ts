@@ -1,4 +1,14 @@
 export const API_URL = 'http://localhost:3006/api';
+export const DATA_UPDATE_KEY = 'grc_clinic_data_update';
+
+export function broadcastDataUpdate(entity: string) {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+        window.localStorage.setItem(DATA_UPDATE_KEY, JSON.stringify({ entity, timestamp: Date.now() }));
+    } catch (e) {
+        console.warn('Unable to broadcast data update', e);
+    }
+}
 
 // Security Utility to prevent Cross-Site Scripting (XSS)
 export function escapeHTML(str: string | null | undefined): string {
@@ -26,6 +36,7 @@ export async function createPatient(data: any) {
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || 'Failed to create patient');
+  broadcastDataUpdate('patients');
   return result;
 }
 
@@ -40,12 +51,18 @@ export async function updatePatient(id: string, data: any) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
-  return await response.json();
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Failed to update patient');
+  broadcastDataUpdate('patients');
+  return result;
 }
 
 export async function deletePatient(id: string) {
   const response = await fetch(`${API_URL}/patients/${id}`, { method: 'DELETE' });
-  return await response.json();
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Failed to delete patient');
+  broadcastDataUpdate('patients');
+  return result;
 }
 
 export async function fetchMedicines() {
@@ -63,6 +80,7 @@ export async function createMedicine(data: any) {
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || 'Failed to create medicine');
+  broadcastDataUpdate('medicines');
   return result;
 }
 
@@ -74,6 +92,7 @@ export async function updateMedicineStock(id: string, data: any) {
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || 'Failed to update stock');
+  broadcastDataUpdate('medicines');
   return result;
 }
 export async function fetchMedicine(id: string) {
@@ -87,12 +106,18 @@ export async function updateMedicine(id: string, data: any) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
-  return await response.json();
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Failed to update medicine');
+  broadcastDataUpdate('medicines');
+  return result;
 }
 
 export async function deleteMedicine(id: string) {
   const response = await fetch(`${API_URL}/medicines/${id}`, { method: 'DELETE' });
-  return await response.json();
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Failed to delete medicine');
+  broadcastDataUpdate('medicines');
+  return result;
 }
 
 export async function fetchInventoryMovements() {
@@ -124,6 +149,7 @@ export async function createConsultation(data: any) {
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || 'Failed to create consultation');
+  broadcastDataUpdate('consultations');
   return result;
 }
 
@@ -138,10 +164,16 @@ export async function updateConsultation(id: string, data: any) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
-  return await response.json();
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Failed to update consultation');
+  broadcastDataUpdate('consultations');
+  return result;
 }
 
 export async function deleteConsultation(id: string) {
   const response = await fetch(`${API_URL}/consultations/${id}`, { method: 'DELETE' });
-  return await response.json();
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Failed to delete consultation');
+  broadcastDataUpdate('consultations');
+  return result;
 }

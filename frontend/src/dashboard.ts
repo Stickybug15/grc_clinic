@@ -1,9 +1,26 @@
-import { fetchMedicines, fetchConsultations } from './api';
+import { fetchMedicines, fetchConsultations, DATA_UPDATE_KEY } from './api';
 
 document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        const consultations = await fetchConsultations();
-        const medicines = await fetchMedicines();
+    function showToast(message: string) {
+        const toast = document.getElementById('global-toast');
+        if (!toast) return;
+        toast.textContent = message;
+        toast.classList.remove('opacity-0', 'pointer-events-none');
+        toast.classList.add('opacity-100');
+        const timeoutKey = '_toastTimeout' as keyof HTMLElement;
+        if ((toast as any)[timeoutKey]) {
+            window.clearTimeout((toast as any)[timeoutKey]);
+        }
+        (toast as any)[timeoutKey] = window.setTimeout(() => {
+            toast.classList.add('opacity-0');
+            toast.classList.add('pointer-events-none');
+        }, 3000);
+    }
+
+    async function loadDashboard() {
+        try {
+            const consultations = await fetchConsultations();
+            const medicines = await fetchMedicines();
 
         // Stats calculation
         const todayStr = new Date().toISOString().split('T')[0];
@@ -118,4 +135,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (e) {
         console.error('Failed to load dashboard data', e);
     }
+}
+
+    await loadDashboard();
+
+    const REFRESH_INTERVAL_MS = 10000;
+    setInterval(loadDashboard, REFRESH_INTERVAL_MS);
+
+    window.addEventListener('storage', (event) => {
+        if (event.key === DATA_UPDATE_KEY) {
+            loadDashboard();
+            showToast('Dashboard refreshed from another tab.');
+        }
+    });
 });

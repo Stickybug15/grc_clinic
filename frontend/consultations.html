@@ -133,7 +133,7 @@
 
             <div class="flex flex-col">
                 <label class="text-sm font-bold text-slate-800 mb-2">Instruction / Remarks</label>
-                <textarea name="remarks" class="border-slate-300 rounded p-2 text-sm w-full min-h-[100px]" placeholder="Type remarks here..."></textarea>
+                <textarea name="remarks" class="border-slate-300 rounded p-2 text-sm w-full min-h-[100px]" placeholder="Type remarks here..." spellcheck="false" data-gramm="false" data-gramm_editor="false"></textarea>
             </div>
 
             <div class="flex items-center gap-4">
@@ -175,7 +175,7 @@
 
             <div class="flex flex-col">
                 <label class="text-sm font-bold text-slate-800 mb-2">Instruction / Remarks</label>
-                <textarea name="remarks" id="edit_remarks" class="border-slate-300 rounded p-2 text-sm w-full min-h-[100px]"></textarea>
+                <textarea name="remarks" id="edit_remarks" class="border-slate-300 rounded p-2 text-sm w-full min-h-[100px]" spellcheck="false" data-gramm="false" data-gramm_editor="false"></textarea>
             </div>
 
             <div class="flex items-center gap-4">
@@ -193,5 +193,6 @@
     </div>
 </div>
 
+<div id="global-toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded shadow-lg opacity-0 pointer-events-none transition-opacity duration-300"></div>
 <script type="module" src="/src/consultations.ts"></script>
 </body></html>

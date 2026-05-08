@@ -158,7 +158,20 @@
             <div class="grid grid-cols-2 gap-4">
                 <div><label class="block text-sm font-semibold text-slate-700">Medicine Name</label><input type="text" name="med_name" required class="w-full border border-slate-300 p-2 rounded"></div>
                 <div><label class="block text-sm font-semibold text-slate-700">Generic Name</label><input type="text" name="generic_name" required class="w-full border border-slate-300 p-2 rounded"></div>
-                <div><label class="block text-sm font-semibold text-slate-700">Category</label><input type="text" name="category" required class="w-full border border-slate-300 p-2 rounded"></div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700">Category</label>
+                    <select name="category" required class="w-full border border-slate-300 p-2 rounded">
+                        <option value="analgesic">Analgesic</option>
+                        <option value="antibiotic">Antibiotic</option>
+                        <option value="antihistamine">Antihistamine</option>
+                        <option value="antacid">Antacid</option>
+                        <option value="antiseptic">Antiseptic</option>
+                        <option value="vitamin_supplement">Vitamin Supplement</option>
+                        <option value="decongestant">Decongestant</option>
+                        <option value="wound_care">Wound Care</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
                 <div><label class="block text-sm font-semibold text-slate-700">Unit (e.g. mg, tablet)</label><input type="text" name="unit" required class="w-full border border-slate-300 p-2 rounded"></div>
                 <div><label class="block text-sm font-semibold text-slate-700">Initial Stock</label><input type="number" name="stock_qty" value="0" required class="w-full border border-slate-300 p-2 rounded"></div>
                 <div><label class="block text-sm font-semibold text-slate-700">Reorder Level</label><input type="number" name="reorder_level" value="10" required class="w-full border border-slate-300 p-2 rounded"></div>
@@ -181,7 +194,20 @@
             <div class="grid grid-cols-2 gap-4">
                 <div><label class="block text-sm font-semibold text-slate-700">Medicine Name</label><input type="text" name="med_name" id="edit_med_name" required class="w-full border border-slate-300 p-2 rounded"></div>
                 <div><label class="block text-sm font-semibold text-slate-700">Generic Name</label><input type="text" name="generic_name" id="edit_generic_name" required class="w-full border border-slate-300 p-2 rounded"></div>
-                <div><label class="block text-sm font-semibold text-slate-700">Category</label><input type="text" name="category" id="edit_category" required class="w-full border border-slate-300 p-2 rounded"></div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700">Category</label>
+                    <select name="category" id="edit_category" required class="w-full border border-slate-300 p-2 rounded">
+                        <option value="analgesic">Analgesic</option>
+                        <option value="antibiotic">Antibiotic</option>
+                        <option value="antihistamine">Antihistamine</option>
+                        <option value="antacid">Antacid</option>
+                        <option value="antiseptic">Antiseptic</option>
+                        <option value="vitamin_supplement">Vitamin Supplement</option>
+                        <option value="decongestant">Decongestant</option>
+                        <option value="wound_care">Wound Care</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
                 <div><label class="block text-sm font-semibold text-slate-700">Unit (e.g. mg, tablet)</label><input type="text" name="unit" id="edit_unit" required class="w-full border border-slate-300 p-2 rounded"></div>
                 <!-- Stock Qty is not editable directly here, only through Update Stock -->
                 <div><label class="block text-sm font-semibold text-slate-700">Reorder Level</label><input type="number" name="reorder_level" id="edit_reorder_level" required class="w-full border border-slate-300 p-2 rounded"></div>
@@ -226,7 +252,7 @@
             </div>
             <div>
                 <label class="block text-sm font-semibold text-slate-700">Remarks</label>
-                <input type="text" name="remarks" class="w-full border border-slate-300 p-2 rounded">
+                <input type="text" name="remarks" class="w-full border border-slate-300 p-2 rounded" spellcheck="false" data-gramm="false" data-gramm_editor="false">
             </div>
             
             <div class="flex justify-end space-x-3 mt-6">
@@ -266,5 +292,6 @@
     </div>
 </div>
 
+<div id="global-toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded shadow-lg opacity-0 pointer-events-none transition-opacity duration-300"></div>
 <script type="module" src="/src/medicines.ts"></script>
 </body></html>

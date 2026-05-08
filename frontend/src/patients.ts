@@ -1,6 +1,22 @@
-import { fetchPatients, createPatient, fetchPatient, updatePatient, deletePatient, escapeHTML } from './api';
+import { fetchPatients, createPatient, fetchPatient, updatePatient, deletePatient, escapeHTML, DATA_UPDATE_KEY } from './api';
 
 document.addEventListener('DOMContentLoaded', async () => {
+    function showToast(message: string) {
+        const toast = document.getElementById('global-toast');
+        if (!toast) return;
+        toast.textContent = message;
+        toast.classList.remove('opacity-0', 'pointer-events-none');
+        toast.classList.add('opacity-100');
+        const timeoutKey = '_toastTimeout' as keyof HTMLElement;
+        if ((toast as any)[timeoutKey]) {
+            window.clearTimeout((toast as any)[timeoutKey]);
+        }
+        (toast as any)[timeoutKey] = window.setTimeout(() => {
+            toast.classList.add('opacity-0');
+            toast.classList.add('pointer-events-none');
+        }, 3000);
+    }
+
     // 1. Load and Render Patients
     const tableBody = document.getElementById('patients-table-body');
     let allPatients: any[] = [];
@@ -47,6 +63,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     loadPatients();
+
+    window.addEventListener('storage', (event) => {
+        if (event.key === DATA_UPDATE_KEY) {
+            loadPatients();
+            showToast('Patient data refreshed from another tab.');
+        }
+    });
+
+    const REFRESH_INTERVAL_MS = 10000;
+    setInterval(loadPatients, REFRESH_INTERVAL_MS);
 
     // 1.5 Search Logic
     const searchInput = document.getElementById('search-input') as HTMLInputElement;

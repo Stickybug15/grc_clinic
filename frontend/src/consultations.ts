@@ -1,10 +1,28 @@
-import { fetchPatients, fetchMedicines, createConsultation, fetchConsultations, fetchConsultation, updateConsultation, deleteConsultation, escapeHTML } from './api';
+import { fetchPatients, fetchMedicines, createConsultation, fetchConsultations, fetchConsultation, updateConsultation, deleteConsultation, escapeHTML, DATA_UPDATE_KEY } from './api';
 
 document.addEventListener('DOMContentLoaded', async () => {
+    function showToast(message: string) {
+        const toast = document.getElementById('global-toast');
+        if (!toast) return;
+        toast.textContent = message;
+        toast.classList.remove('opacity-0', 'pointer-events-none');
+        toast.classList.add('opacity-100');
+        const timeoutKey = '_toastTimeout' as keyof HTMLElement;
+        if ((toast as any)[timeoutKey]) {
+            window.clearTimeout((toast as any)[timeoutKey]);
+        }
+        (toast as any)[timeoutKey] = window.setTimeout(() => {
+            toast.classList.add('opacity-0');
+            toast.classList.add('pointer-events-none');
+        }, 3000);
+    }
+
     // 1. Populate Patient Dropdown for Add Modal
     const patientSelect = document.getElementById('select-patient') as HTMLSelectElement;
-    if (patientSelect) {
+    async function loadPatientOptions() {
+        if (!patientSelect) return;
         try {
+            patientSelect.innerHTML = '<option value="">-- Select Patient --</option>';
             const patients = await fetchPatients();
             patients.forEach((p: any) => {
                 const opt = document.createElement('option');
@@ -16,14 +34,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error("Error loading patients", e);
         }
     }
-    
+
+    await loadPatientOptions();
+
     // 1b. Load Medicines for Dispensing Dropdown
     let availableMedicines: any[] = [];
-    try {
-        availableMedicines = await fetchMedicines();
-    } catch(e) {
-        console.error("Error loading medicines", e);
+    async function loadMedicineOptions() {
+        try {
+            availableMedicines = await fetchMedicines();
+        } catch(e) {
+            console.error("Error loading medicines", e);
+        }
     }
+
+    await loadMedicineOptions();
 
     // 1c. Dynamic Dispense Medicine Rows
     const btnAddDispense = document.getElementById('btn-add-dispense-row');
@@ -93,6 +117,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     loadConsultations();
+
+    window.addEventListener('storage', (event) => {
+        if (event.key === DATA_UPDATE_KEY) {
+            loadConsultations();
+            loadPatientOptions();
+            loadMedicineOptions();
+            showToast('Consultations refreshed from another tab.');
+        }
+    });
+
+    const REFRESH_INTERVAL_MS = 10000;
+    setInterval(() => {
+        loadConsultations();
+        loadPatientOptions();
+        loadMedicineOptions();
+    }, REFRESH_INTERVAL_MS);
 
     // 3. Modals Toggle Logic
     const addModal = document.getElementById('add-consultation-modal');
