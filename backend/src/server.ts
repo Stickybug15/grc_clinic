@@ -76,7 +76,18 @@ app.get('/api/schema', async (req: Request, res: Response) => {
 // =======================
 app.get('/api/patients', async (req: Request, res: Response) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM patients ORDER BY created_at DESC');
+    const [rows] = await pool.query(`
+      SELECT p.patient_id, p.student_no, p.first_name, p.last_name, p.middle_name,
+             p.level_section, p.birth_date, p.gender, p.guardian_name,
+             p.guardian_contact, p.medical_background, p.is_enrolled,
+             p.created_at, p.updated_at,
+             COUNT(c.consult_id) AS visit_count,
+             MAX(c.visit_timestamp) AS last_visit
+      FROM patients p
+      LEFT JOIN consultations c ON p.patient_id = c.patient_id
+      GROUP BY p.patient_id
+      ORDER BY p.created_at DESC
+    `);
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: sanitizeError(error) });
@@ -106,7 +117,12 @@ app.get('/api/patients/:id', async (req: Request, res: Response): Promise<any> =
     if ((rows as any[]).length === 0) {
       return res.status(404).json({ error: 'Patient not found' });
     }
-    res.json((rows as any[])[0]);
+    const [visitRows] = await pool.query('SELECT COUNT(*) AS visit_count, MAX(visit_timestamp) AS last_visit FROM consultations WHERE patient_id = ?', [id]);
+    const patient = (rows as any[])[0];
+    const visitData = (visitRows as any[])[0] || { visit_count: 0, last_visit: null };
+    patient.visit_count = Number(visitData.visit_count || 0);
+    patient.last_visit = visitData.last_visit || null;
+    res.json(patient);
   } catch (error) {
     res.status(500).json({ error: sanitizeError(error) });
   }
@@ -303,7 +319,7 @@ app.get('/api/inventory-movements/all', async (req: Request, res: Response) => {
 app.get('/api/consultations', async (req: Request, res: Response) => {
   try {
     const [rows] = await pool.query(`
-      SELECT c.*, CONCAT(p.first_name, ' ', p.last_name) AS full_name, p.student_no 
+      SELECT c.*, c.consult_id AS consultation_id, CONCAT(p.first_name, ' ', p.last_name) AS full_name, p.student_no 
       FROM consultations c 
       JOIN patients p ON c.patient_id = p.patient_id 
       ORDER BY c.visit_timestamp DESC
@@ -366,7 +382,14 @@ app.post('/api/consultations', async (req: Request, res: Response) => {
 app.get('/api/consultations/:id', async (req: Request, res: Response): Promise<any> => {
   const { id } = req.params;
   try {
-    const [rows] = await pool.query('SELECT c.*, p.full_name, p.student_no FROM consultations c JOIN patients p ON c.patient_id = p.patient_id WHERE consultation_id = ?', [id]);
+    const [rows] = await pool.query(`
+      SELECT c.*, c.consult_id AS consultation_id,
+             CONCAT(p.first_name, ' ', p.last_name) AS full_name,
+             p.student_no
+      FROM consultations c
+      JOIN patients p ON c.patient_id = p.patient_id
+      WHERE c.consult_id = ?
+    `, [id]);
     if ((rows as any[]).length === 0) return res.status(404).json({ error: 'Consultation not found' });
     res.json((rows as any[])[0]);
   } catch (error) {
@@ -379,7 +402,7 @@ app.put('/api/consultations/:id', async (req: Request, res: Response): Promise<a
   const { symptoms, treatment, remarks, followup_required } = req.body;
   try {
     const [result] = await pool.query(
-      'UPDATE consultations SET symptoms = ?, treatment = ?, remarks = ?, followup_required = ? WHERE consultation_id = ?',
+      'UPDATE consultations SET symptoms = ?, treatment = ?, remarks = ?, followup_required = ? WHERE consult_id = ?',
       [symptoms, treatment, remarks, followup_required ? 1 : 0, id]
     );
     if ((result as any).affectedRows === 0) return res.status(404).json({ error: 'Consultation not found' });
@@ -392,7 +415,7 @@ app.put('/api/consultations/:id', async (req: Request, res: Response): Promise<a
 app.delete('/api/consultations/:id', async (req: Request, res: Response): Promise<any> => {
   const { id } = req.params;
   try {
-    const [result] = await pool.query('DELETE FROM consultations WHERE consultation_id = ?', [id]);
+    const [result] = await pool.query('DELETE FROM consultations WHERE consult_id = ?', [id]);
     if ((result as any).affectedRows === 0) return res.status(404).json({ error: 'Consultation not found' });
     res.json({ message: 'Consultation deleted successfully' });
   } catch (error) {

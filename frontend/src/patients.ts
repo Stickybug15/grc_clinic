@@ -45,12 +45,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         patientsToRender.forEach((p: any) => {
             const tr = document.createElement('tr');
             tr.className = "border-b border-slate-100 hover:bg-slate-50 transition-colors";
-            const lastVisit = p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A';
+            const lastVisit = p.last_visit ? new Date(p.last_visit).toLocaleDateString() : (p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A');
+            const visitCount = p.visit_count != null ? Number(p.visit_count) : 0;
 
             tr.innerHTML = `
                 <td class="px-4 py-5 border-r border-slate-100 last:border-r-0 font-medium">${escapeHTML(p.student_no)}</td>
                 <td class="px-4 py-5 border-r border-slate-100 last:border-r-0">${escapeHTML(p.first_name)} ${escapeHTML(p.last_name)}</td>
                 <td class="px-4 py-5 border-r border-slate-100 last:border-r-0">${escapeHTML(p.level_section) || 'N/A'}</td>
+                <td class="px-4 py-5 border-r border-slate-100 last:border-r-0">${escapeHTML(String(visitCount))}</td>
                 <td class="px-4 py-5 border-r border-slate-100 last:border-r-0">${escapeHTML(lastVisit)}</td>
                 <td class="px-4 py-5 flex items-center justify-center space-x-2">
                     <button data-id="${p.patient_id}" class="btn-view-patient bg-[#0078d4] hover:bg-blue-600 text-white px-4 py-1.5 rounded text-xs font-semibold transition-colors">View</button>
@@ -142,6 +144,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         document.getElementById('view_gender')!.textContent = patient.gender;
                         document.getElementById('view_birth_date')!.textContent = patient.birth_date ? new Date(patient.birth_date).toLocaleDateString() : 'N/A';
                         document.getElementById('view_level_section')!.textContent = patient.level_section || 'N/A';
+                        document.getElementById('view_visit_count')!.textContent = String(patient.visit_count != null ? patient.visit_count : 0);
+                        document.getElementById('view_last_visit')!.textContent = patient.last_visit ? new Date(patient.last_visit).toLocaleDateString() : 'N/A';
                         document.getElementById('view_contact_no')!.textContent = 'N/A'; // No direct contact_no in DB
                         document.getElementById('view_emergency_contact_name')!.textContent = patient.guardian_name || 'N/A';
                         document.getElementById('view_emergency_contact_no')!.textContent = patient.guardian_contact || 'N/A';

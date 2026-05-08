@@ -28,7 +28,7 @@ SET time_zone = "+00:00";
 --
 
 CREATE TABLE `consultations` (
-  `consult_id` int(11) NOT NULL,
+  `consult_id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
   `patient_id` int(11) NOT NULL,
   `visit_timestamp` datetime NOT NULL DEFAULT current_timestamp(),
   `symptoms` text NOT NULL,
@@ -38,7 +38,9 @@ CREATE TABLE `consultations` (
   `followup_required` tinyint(1) NOT NULL DEFAULT 0,
   `followup_date` date DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  KEY `idx_consultations_patient` (`patient_id`),
+  KEY `idx_consultations_timestamp` (`visit_timestamp`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Clinic visits. Data Dictionary source: consultations_db.sql';
 
 --
@@ -344,14 +346,6 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 -- Indexes for dumped tables
 --
-
---
--- Indexes for table `consultations`
---
-ALTER TABLE `consultations`
-  ADD PRIMARY KEY (`consult_id`),
-  ADD KEY `idx_consultations_patient` (`patient_id`),
-  ADD KEY `idx_consultations_timestamp` (`visit_timestamp`);
 
 --
 -- Indexes for table `consult_treatment_types`
