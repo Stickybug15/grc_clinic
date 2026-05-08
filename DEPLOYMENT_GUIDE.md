@@ -13,29 +13,26 @@ On the clinic computer, you need to install the two primary engines that run thi
 
 ---
 
-### Step 2: Transfer the Database
-You must move your current database data over to the new computer.
+### Step 2: Set Up the Database
+You need to create the database and import the schema with sample data.
 
-1. On your **current computer**, open XAMPP, and click **"Admin"** next to MySQL to open phpMyAdmin.
-2. Click on your `grc_clinic_db` database on the left sidebar.
-3. Go to the **Export** tab at the top of the screen and click **Export**. This will download an `.sql` file to your computer.
-4. Move this `.sql` file onto a USB Flash Drive.
-5. Go to the **clinic computer**, open XAMPP, and click "Admin" next to MySQL.
-6. Create a new database named exactly `grc_clinic_db`.
-7. Click on the new database, go to the **Import** tab, and upload your `.sql` file from the USB drive.
+1. Open XAMPP Control Panel and click **Start** next to the **MySQL** module.
+2. Click **"Admin"** next to MySQL to open phpMyAdmin.
+3. Create a new database named exactly `grc_clinic_db` (use UTF8 collation).
+4. Click on the new database, go to the **Import** tab.
+5. Upload the `backend/grc_clinic_db.sql` file from the project folder and click **Import**.
 
 ---
 
 ### Step 3: Transfer the Code
-1. On your **current computer**, copy the entire `school-clinic` project folder onto your USB Flash Drive.
-2. Paste the folder onto the **clinic computer** (e.g., in the Documents folder or directly on the `C:\` drive).
+1. Copy the entire `grc_clinic` project folder onto the **clinic computer** (e.g., in the Documents folder or directly on the `C:\` drive).
 
 ---
 
 ### Step 4: Initial Setup (One-Time Only)
 The first time you put the code on the clinic computer, you must install the dependencies.
 
-1. Open the `school-clinic` folder in VS Code (or your terminal) on the clinic computer.
+1. Open the `grc_clinic` folder in VS Code (or your terminal) on the clinic computer.
 2. Open two terminals.
 3. **In the first terminal:** Navigate to the backend by typing `cd backend`. Then run:
    ```bash
