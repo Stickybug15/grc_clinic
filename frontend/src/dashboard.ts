@@ -17,10 +17,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 3000);
     }
 
-    async function loadDashboard() {
+    let lastDashboardDataStr = '';
+    async function loadDashboard(silent = false) {
         try {
             const consultations = await fetchConsultations();
             const medicines = await fetchMedicines();
+            
+            const newDataStr = JSON.stringify({ consultations, medicines });
+            if (silent && newDataStr === lastDashboardDataStr) return;
+            lastDashboardDataStr = newDataStr;
+
 
         // Stats calculation
         const todayStr = new Date().toISOString().split('T')[0];
@@ -62,97 +68,66 @@ document.addEventListener('DOMContentLoaded', async () => {
         const alertsContainer = document.getElementById('dashboard-alerts')!;
         alertsContainer.innerHTML = '';
         
-        // Load dismissed alerts from localStorage
-        const dismissedStr = localStorage.getItem('dismissedAlerts');
-        const dismissedAlerts = dismissedStr ? JSON.parse(dismissedStr) : {};
-        const now = Date.now();
-        
-        // Cleanup expired dismissals (older than 24 hours)
-        Object.keys(dismissedAlerts).forEach(k => {
-            if (now - dismissedAlerts[k] > 86400000) delete dismissedAlerts[k];
-        });
-        localStorage.setItem('dismissedAlerts', JSON.stringify(dismissedAlerts));
 
         medicines.forEach((m: any) => {
             if (m.stock_qty <= 0) {
                 // Out of Stock (overrides expiring soon and low stock)
                 const alertKey = `out_of_stock_${m.medicine_id}`;
-                if (!dismissedAlerts[alertKey]) {
-                    alertsContainer.innerHTML += `
-                        <div class="alert-item flex items-center justify-between py-4 border-t border-slate-200" data-alert-key="${alertKey}">
-                            <div class="flex items-center gap-4">
-                                <span class="material-symbols-outlined text-red-600">error</span>
-                                <p class="text-sm font-bold text-red-600">${m.med_name} is Out of Stock!</p>
-                            </div>
-                            <button class="btn-dismiss-alert text-slate-400 hover:text-slate-600" title="Dismiss for 24h"><span class="material-symbols-outlined text-[18px]">close</span></button>
+                alertsContainer.innerHTML += `
+                    <div class="alert-item flex items-center justify-between py-4 px-2 border-t border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors" data-alert-key="${alertKey}" onclick="window.location.href='medicines.html?search=${encodeURIComponent(m.med_name)}'">
+                        <div class="flex items-center gap-4">
+                            <span class="material-symbols-outlined text-red-600">error</span>
+                            <p class="text-sm font-bold text-red-600">${m.med_name} is Out of Stock!</p>
                         </div>
-                    `;
-                }
+                        <span class="material-symbols-outlined text-slate-400 text-sm">arrow_forward_ios</span>
+                    </div>
+                `;
             } else {
                 // Low Stock
                 if (m.stock_qty <= m.reorder_threshold) {
                     const alertKey = `low_stock_${m.medicine_id}`;
-                    if (!dismissedAlerts[alertKey]) {
-                        alertsContainer.innerHTML += `
-                            <div class="alert-item flex items-center justify-between py-4 border-t border-slate-200" data-alert-key="${alertKey}">
-                                <div class="flex items-center gap-4">
-                                    <span class="material-symbols-outlined text-orange-500">warning</span>
-                                    <p class="text-sm font-semibold text-slate-700">${m.med_name} Stock is low (${m.stock_qty} left)</p>
-                                </div>
-                                <button class="btn-dismiss-alert text-slate-400 hover:text-slate-600" title="Dismiss for 24h"><span class="material-symbols-outlined text-[18px]">close</span></button>
+                    alertsContainer.innerHTML += `
+                        <div class="alert-item flex items-center justify-between py-4 px-2 border-t border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors" data-alert-key="${alertKey}" onclick="window.location.href='medicines.html?search=${encodeURIComponent(m.med_name)}'">
+                            <div class="flex items-center gap-4">
+                                <span class="material-symbols-outlined text-orange-500">warning</span>
+                                <p class="text-sm font-semibold text-slate-700">${m.med_name} Stock is low (${m.stock_qty} left)</p>
                             </div>
-                        `;
-                    }
+                            <span class="material-symbols-outlined text-slate-400 text-sm">arrow_forward_ios</span>
+                        </div>
+                    `;
                 }
                 // Expiry Alerts
                 const expDate = new Date(m.expiry_date);
                 if (expDate < new Date()) {
                     // Expired
                     const alertKey = `expired_${m.medicine_id}`;
-                    if (!dismissedAlerts[alertKey]) {
-                        alertsContainer.innerHTML += `
-                            <div class="alert-item flex items-center justify-between py-4 border-t border-slate-200" data-alert-key="${alertKey}">
-                                <div class="flex items-center gap-4">
-                                    <span class="material-symbols-outlined text-red-600">block</span>
-                                    <p class="text-sm font-bold text-red-600">${m.med_name} is already EXPIRED (${expDate.toLocaleDateString()})</p>
-                                </div>
-                                <button class="btn-dismiss-alert text-slate-400 hover:text-slate-600" title="Dismiss for 24h"><span class="material-symbols-outlined text-[18px]">close</span></button>
+                    alertsContainer.innerHTML += `
+                        <div class="alert-item flex items-center justify-between py-4 px-2 border-t border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors" data-alert-key="${alertKey}" onclick="window.location.href='medicines.html?search=${encodeURIComponent(m.med_name)}'">
+                            <div class="flex items-center gap-4">
+                                <span class="material-symbols-outlined text-red-600">block</span>
+                                <p class="text-sm font-bold text-red-600">${m.med_name} is already EXPIRED (${expDate.toLocaleDateString()})</p>
                             </div>
-                        `;
-                    }
+                            <span class="material-symbols-outlined text-slate-400 text-sm">arrow_forward_ios</span>
+                        </div>
+                    `;
                 } else if (expDate <= thirtyDaysFromNow) {
                     // Expiring Soon
                     const alertKey = `expiring_${m.medicine_id}`;
-                    if (!dismissedAlerts[alertKey]) {
-                        alertsContainer.innerHTML += `
-                            <div class="alert-item flex items-center justify-between py-4 border-t border-slate-200" data-alert-key="${alertKey}">
-                                <div class="flex items-center gap-4">
-                                    <span class="material-symbols-outlined text-amber-500">schedule</span>
-                                    <p class="text-sm font-semibold text-slate-700">${m.med_name} is expiring soon (${expDate.toLocaleDateString()})</p>
-                                </div>
-                                <button class="btn-dismiss-alert text-slate-400 hover:text-slate-600" title="Dismiss for 24h"><span class="material-symbols-outlined text-[18px]">close</span></button>
+                    alertsContainer.innerHTML += `
+                        <div class="alert-item flex items-center justify-between py-4 px-2 border-t border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors" data-alert-key="${alertKey}" onclick="window.location.href='medicines.html?search=${encodeURIComponent(m.med_name)}'">
+                            <div class="flex items-center gap-4">
+                                <span class="material-symbols-outlined text-amber-500">schedule</span>
+                                <p class="text-sm font-semibold text-slate-700">${m.med_name} is expiring soon (${expDate.toLocaleDateString()})</p>
                             </div>
-                        `;
-                    }
+                            <span class="material-symbols-outlined text-slate-400 text-sm">arrow_forward_ios</span>
+                        </div>
+                    `;
                 }
             }
         });
 
-        // Add event listeners for dismiss buttons
-        document.querySelectorAll('.btn-dismiss-alert').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const target = e.currentTarget as HTMLElement;
-                const alertItem = target.closest('.alert-item') as HTMLElement;
-                if (alertItem) {
-                    const key = alertItem.getAttribute('data-alert-key');
-                    if (key) {
-                        dismissedAlerts[key] = Date.now();
-                        localStorage.setItem('dismissedAlerts', JSON.stringify(dismissedAlerts));
-                    }
-                    alertItem.classList.add('hidden');
-                }
-            });
-        });
+        // Event listeners for dismiss buttons removed as per request to not vanish alerts
+
     } catch (e) {
         console.error('Failed to load dashboard data', e);
     }
@@ -161,7 +136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadDashboard();
 
     const REFRESH_INTERVAL_MS = 10000;
-    setInterval(loadDashboard, REFRESH_INTERVAL_MS);
+    setInterval(() => loadDashboard(true), REFRESH_INTERVAL_MS);
 
     window.addEventListener('storage', (event) => {
         if (event.key === DATA_UPDATE_KEY) {

@@ -1,4 +1,6 @@
 import { fetchPatients, fetchMedicines, createConsultation, fetchConsultations, fetchConsultation, updateConsultation, deleteConsultation, escapeHTML, DATA_UPDATE_KEY } from './api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 document.addEventListener('DOMContentLoaded', async () => {
     function showToast(message: string) {
@@ -19,11 +21,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 1. Populate Patient Dropdown for Add Modal
     const patientSelect = document.getElementById('select-patient') as HTMLSelectElement;
-    async function loadPatientOptions() {
+    let lastPatientOptionsStr = '';
+    async function loadPatientOptions(silent = false) {
         if (!patientSelect) return;
         try {
-            patientSelect.innerHTML = '<option value="">-- Select Patient --</option>';
             const patients = await fetchPatients();
+            const newDataStr = JSON.stringify(patients);
+            if (silent && newDataStr === lastPatientOptionsStr) return;
+            lastPatientOptionsStr = newDataStr;
+
+            patientSelect.innerHTML = '<option value="">-- Select Patient --</option>';
             patients.forEach((p: any) => {
                 const opt = document.createElement('option');
                 opt.value = p.patient_id;
@@ -61,7 +68,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Build options string
             let optionsHtml = '<option value="">-- Select Medicine --</option>';
             availableMedicines.filter(m => m.stock_qty > 0).forEach(m => {
-                optionsHtml += `<option value="${m.medicine_id}">${m.med_name} (${m.stock_qty} in stock)</option>`;
+                const exp = m.expiry_date ? new Date(m.expiry_date).toLocaleDateString() : 'N/A';
+                optionsHtml += `<option value="${m.medicine_id}">${m.med_name} (Exp: ${exp}) (${m.stock_qty} in stock)</option>`;
             });
 
             row.innerHTML = `
@@ -83,26 +91,94 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 2. Load and Render Consultations Table
     const tableBody = document.getElementById('consultations-table-body');
-    async function loadConsultations() {
-        if (!tableBody) return;
-        try {
-            tableBody.innerHTML = '<tr><td colspan="5" class="py-4 text-center">Loading...</td></tr>';
-            const consultations = await fetchConsultations();
-            tableBody.innerHTML = '';
-            
-            if (consultations.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-slate-500">No consultations found.</td></tr>';
-                return;
-            }
+    const searchConsultation = document.getElementById('search-consultation') as HTMLInputElement;
+    const filterConsultationMonth = document.getElementById('filter-consultation-month') as HTMLSelectElement;
+    const filterConsultationYear = document.getElementById('filter-consultation-year') as HTMLSelectElement;
+    const btnExportConsultationPdf = document.getElementById('btn-export-consultation-pdf');
+    const btnConsultationPrev = document.getElementById('btn-consultation-prev') as HTMLButtonElement;
+    const btnConsultationNext = document.getElementById('btn-consultation-next') as HTMLButtonElement;
+    const consultationPaginationInfo = document.getElementById('consultation-pagination-info');
 
-            consultations.forEach((c: any) => {
+    let allConsultations: any[] = [];
+    let currentConsultationPage = 1;
+    const consultationsPerPage = 15;
+
+    // Populate Year Dropdown dynamically
+    if (filterConsultationYear) {
+        const currentYear = new Date().getFullYear();
+        for (let y = 2024; y <= currentYear + 10; y++) {
+            const opt = document.createElement('option');
+            opt.value = String(y);
+            opt.textContent = String(y);
+            filterConsultationYear.appendChild(opt);
+        }
+    }
+
+    function renderConsultations() {
+        if (!tableBody) return;
+
+        let filteredLogs = allConsultations;
+        const searchTerm = searchConsultation ? searchConsultation.value.toLowerCase() : '';
+        const monthFilter = filterConsultationMonth ? filterConsultationMonth.value : '';
+        const yearFilter = filterConsultationYear ? filterConsultationYear.value : '';
+
+        if (searchTerm) {
+            filteredLogs = filteredLogs.filter((c: any) => 
+                c.full_name.toLowerCase().includes(searchTerm) || 
+                c.student_no.toLowerCase().includes(searchTerm) ||
+                c.symptoms.toLowerCase().includes(searchTerm)
+            );
+        }
+
+        if (monthFilter || yearFilter) {
+            filteredLogs = filteredLogs.filter((c: any) => {
+                if (!c.visit_timestamp) return false;
+                const d = new Date(c.visit_timestamp);
+                const mMonth = String(d.getMonth() + 1).padStart(2, '0');
+                const mYear = String(d.getFullYear());
+                
+                if (monthFilter && mMonth !== monthFilter) return false;
+                if (yearFilter && mYear !== yearFilter) return false;
+                return true;
+            });
+        }
+
+        const totalItems = filteredLogs.length;
+        const totalPages = Math.ceil(totalItems / consultationsPerPage) || 1;
+        
+        if (currentConsultationPage > totalPages) currentConsultationPage = totalPages;
+        if (currentConsultationPage < 1) currentConsultationPage = 1;
+
+        const startIndex = (currentConsultationPage - 1) * consultationsPerPage;
+        const endIndex = Math.min(startIndex + consultationsPerPage, totalItems);
+        const pageItems = filteredLogs.slice(startIndex, endIndex);
+
+        tableBody.innerHTML = '';
+
+        if (pageItems.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-slate-500">No consultations found matching criteria.</td></tr>';
+        } else {
+            pageItems.forEach((c: any) => {
                 const date = new Date(c.visit_timestamp).toLocaleString();
+                let vitalsHtml = '';
+                if (c.vital_signs) {
+                    try {
+                        const v = typeof c.vital_signs === 'string' ? JSON.parse(c.vital_signs) : c.vital_signs;
+                        if (v && v.temperature) {
+                            vitalsHtml = `<div class="text-xs text-rose-500 font-bold mt-1">Temp: ${v.temperature} °C</div>`;
+                        }
+                    } catch(e) {}
+                }
+
                 const tr = document.createElement('tr');
                 tr.className = "border-b border-slate-100 hover:bg-slate-50 transition-colors";
                 tr.innerHTML = `
                     <td class="px-6 py-4 border-r border-slate-100">${escapeHTML(date)}</td>
                     <td class="px-6 py-4 border-r border-slate-100 font-semibold text-slate-800">${escapeHTML(c.full_name)} <br> <span class="text-xs text-slate-500 font-normal">${escapeHTML(c.student_no)}</span></td>
-                    <td class="px-6 py-4 border-r border-slate-100">${escapeHTML(c.symptoms)}</td>
+                    <td class="px-6 py-4 border-r border-slate-100">
+                        ${escapeHTML(c.symptoms)}
+                        ${vitalsHtml}
+                    </td>
                     <td class="px-6 py-4 border-r border-slate-100">${escapeHTML(c.treatment) || 'N/A'}</td>
                     <td class="px-6 py-4 flex items-center justify-center space-x-3">
                         <button data-id="${c.consultation_id}" class="btn-edit-consultation bg-[#10b981] hover:bg-emerald-600 text-white px-4 py-1 rounded text-xs font-semibold transition-colors">Edit</button>
@@ -111,6 +187,133 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
                 tableBody.appendChild(tr);
             });
+        }
+
+        if (consultationPaginationInfo) {
+            consultationPaginationInfo.textContent = totalItems === 0 
+                ? 'Showing 0 entries' 
+                : `Showing ${startIndex + 1} to ${endIndex} of ${totalItems} entries`;
+        }
+        
+        if (btnConsultationPrev) btnConsultationPrev.disabled = currentConsultationPage === 1;
+        if (btnConsultationNext) btnConsultationNext.disabled = currentConsultationPage === totalPages;
+    }
+
+    if (searchConsultation) {
+        searchConsultation.addEventListener('input', () => {
+            currentConsultationPage = 1;
+            renderConsultations();
+        });
+    }
+
+    if (filterConsultationMonth) {
+        filterConsultationMonth.addEventListener('change', () => {
+            currentConsultationPage = 1;
+            renderConsultations();
+        });
+    }
+
+    if (filterConsultationYear) {
+        filterConsultationYear.addEventListener('change', () => {
+            currentConsultationPage = 1;
+            renderConsultations();
+        });
+    }
+
+    if (btnConsultationPrev) {
+        btnConsultationPrev.addEventListener('click', () => {
+            if (currentConsultationPage > 1) {
+                currentConsultationPage--;
+                renderConsultations();
+            }
+        });
+    }
+    
+    if (btnConsultationNext) {
+        btnConsultationNext.addEventListener('click', () => {
+            currentConsultationPage++;
+            renderConsultations();
+        });
+    }
+
+    if (btnExportConsultationPdf) {
+        btnExportConsultationPdf.addEventListener('click', () => {
+            let filteredLogs = allConsultations;
+            const searchTerm = searchConsultation ? searchConsultation.value.toLowerCase() : '';
+            const monthFilter = filterConsultationMonth ? filterConsultationMonth.value : '';
+            const yearFilter = filterConsultationYear ? filterConsultationYear.value : '';
+
+            if (searchTerm) {
+                filteredLogs = filteredLogs.filter((c: any) => 
+                    c.full_name.toLowerCase().includes(searchTerm) || 
+                    c.student_no.toLowerCase().includes(searchTerm) ||
+                    c.symptoms.toLowerCase().includes(searchTerm)
+                );
+            }
+
+            if (monthFilter || yearFilter) {
+                filteredLogs = filteredLogs.filter((c: any) => {
+                    if (!c.visit_timestamp) return false;
+                    const d = new Date(c.visit_timestamp);
+                    const mMonth = String(d.getMonth() + 1).padStart(2, '0');
+                    const mYear = String(d.getFullYear());
+                    
+                    if (monthFilter && mMonth !== monthFilter) return false;
+                    if (yearFilter && mYear !== yearFilter) return false;
+                    return true;
+                });
+            }
+
+            if (filteredLogs.length === 0) {
+                alert("No consultations to export.");
+                return;
+            }
+
+            const doc = new jsPDF();
+            doc.text("Consultation History Report", 14, 15);
+            
+            const tableData = filteredLogs.map((c: any) => {
+                let temp = 'N/A';
+                if (c.vital_signs) {
+                    try {
+                        const v = typeof c.vital_signs === 'string' ? JSON.parse(c.vital_signs) : c.vital_signs;
+                        if (v && v.temperature) temp = `${v.temperature} °C`;
+                    } catch(e) {}
+                }
+
+                return [
+                    new Date(c.visit_timestamp).toLocaleString(),
+                    c.full_name,
+                    c.symptoms,
+                    temp,
+                    c.treatment || 'N/A'
+                ];
+            });
+
+            autoTable(doc, {
+                startY: 20,
+                head: [['Date/Time', 'Patient Name', 'Symptoms', 'Temp', 'Treatment']],
+                body: tableData,
+            });
+
+            doc.save(`consultations_report.pdf`);
+        });
+    }
+
+    let lastConsultationsDataStr = '';
+    async function loadConsultations(silent = false) {
+        if (!tableBody) return;
+        try {
+            if (!silent) {
+                tableBody.innerHTML = '<tr><td colspan="5" class="py-4 text-center">Loading...</td></tr>';
+            }
+            const fetchedConsultations = await fetchConsultations();
+            const newDataStr = JSON.stringify(fetchedConsultations);
+            if (silent && newDataStr === lastConsultationsDataStr) return;
+            lastConsultationsDataStr = newDataStr;
+            
+            allConsultations = fetchedConsultations;
+            renderConsultations();
         } catch (e) {
             console.error('Failed to load consultations', e);
             if (tableBody) tableBody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-red-500">Failed to load consultations: ${e}</td></tr>`;
@@ -120,8 +323,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.addEventListener('storage', (event) => {
         if (event.key === DATA_UPDATE_KEY) {
-            loadConsultations();
-            loadPatientOptions();
+            loadConsultations(true);
+            loadPatientOptions(true);
             loadMedicineOptions();
             showToast('Consultations refreshed from another tab.');
         }
@@ -129,8 +332,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const REFRESH_INTERVAL_MS = 10000;
     setInterval(() => {
-        loadConsultations();
-        loadPatientOptions();
+        loadConsultations(true);
+        loadPatientOptions(true);
         loadMedicineOptions();
     }, REFRESH_INTERVAL_MS);
 
@@ -168,12 +371,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
+            const temperatureInput = formData.get('temperature') as string;
+            const vitalSigns = temperatureInput ? { temperature: Number(temperatureInput) } : {};
+
             const payload = {
                 patient_id: formData.get('patient_id'),
                 symptoms: formData.get('symptoms') || 'Not specified',
                 treatment: treatments.join(', '),
                 remarks: formData.get('remarks'),
-                vital_signs: {},
+                vital_signs: vitalSigns,
                 followup_required: formData.get('followup_required') === 'on',
                 dispensed_medicines: dispensedMedicines
             };
@@ -217,7 +423,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                         (document.getElementById('edit_consultation_id') as HTMLInputElement).value = consultation.consultation_id;
                         (document.getElementById('edit_patient_name') as HTMLInputElement).value = `${consultation.student_no} - ${consultation.full_name}`;
                         (document.getElementById('edit_symptoms') as HTMLInputElement).value = consultation.symptoms || '';
-                        (document.getElementById('edit_treatment') as HTMLInputElement).value = consultation.treatment || '';
+                        
+                        let temp = '';
+                        if (consultation.vital_signs) {
+                            try {
+                                const v = typeof consultation.vital_signs === 'string' ? JSON.parse(consultation.vital_signs) : consultation.vital_signs;
+                                if (v && v.temperature) temp = String(v.temperature);
+                            } catch(e) {}
+                        }
+                        (document.getElementById('edit_temperature') as HTMLInputElement).value = temp;
+
+                        const treatmentString = consultation.treatment || '';
+                        const treatmentArray = treatmentString.split(',').map((s: string) => s.trim());
+                        document.querySelectorAll('input[name="edit_treatment_option"]').forEach(el => {
+                            const checkbox = el as HTMLInputElement;
+                            checkbox.checked = treatmentArray.includes(checkbox.value);
+                        });
+
                         (document.getElementById('edit_remarks') as HTMLTextAreaElement).value = consultation.remarks || '';
                         (document.getElementById('edit_followup') as HTMLInputElement).checked = consultation.followup_required === 1;
                         
@@ -239,10 +461,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             const formData = new FormData(editForm);
             const id = formData.get('consultation_id') as string;
             
+            // Gather edited treatments
+            const treatments: string[] = [];
+            editForm.querySelectorAll('input[name="edit_treatment_option"]:checked').forEach(el => {
+                treatments.push((el as HTMLInputElement).value);
+            });
+
+            const temperatureInput = formData.get('temperature') as string;
+            const vitalSigns = temperatureInput ? { temperature: Number(temperatureInput) } : {};
+
             const payload = {
                 symptoms: formData.get('symptoms'),
-                treatment: formData.get('treatment'),
+                treatment: treatments.join(', '),
                 remarks: formData.get('remarks'),
+                vital_signs: vitalSigns,
                 followup_required: formData.get('followup_required') === 'on'
             };
 

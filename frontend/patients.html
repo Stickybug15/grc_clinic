@@ -115,22 +115,32 @@
                         <table class="w-full text-center border-collapse">
                             <thead>
                                 <tr class="text-slate-900 border-b border-slate-100">
-                                    <th class="px-4 py-6 text-sm font-bold border-r border-slate-100 last:border-r-0">
+                                    <th class="px-4 py-4 text-sm font-bold border-r border-slate-100 last:border-r-0">
                                         Student ID</th>
-                                    <th class="px-4 py-6 text-sm font-bold border-r border-slate-100 last:border-r-0">
+                                    <th class="px-4 py-4 text-sm font-bold border-r border-slate-100 last:border-r-0">
                                         Name</th>
-                                    <th class="px-4 py-6 text-sm font-bold border-r border-slate-100 last:border-r-0">
+                                    <th class="px-4 py-4 text-sm font-bold border-r border-slate-100 last:border-r-0">
                                         Course / Year</th>
-                                    <th class="px-4 py-6 text-sm font-bold border-r border-slate-100 last:border-r-0">
+                                    <th class="px-4 py-4 text-sm font-bold border-r border-slate-100 last:border-r-0">
                                         Visit Count</th>
-                                    <th class="px-4 py-6 text-sm font-bold border-r border-slate-100 last:border-r-0">
+                                    <th class="px-4 py-4 text-sm font-bold border-r border-slate-100 last:border-r-0">
                                         Last Visit</th>
-                                    <th class="px-4 py-6 text-sm font-bold">Action</th>
+                                    <th class="px-4 py-4 text-sm font-bold border-r border-slate-100 last:border-r-0">
+                                        Alerts</th>
+                                    <th class="px-4 py-4 text-sm font-bold">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="patients-table-body" class="text-slate-700 text-sm">
                             </tbody>
                         </table>
+                    </div>
+                    <!-- Pagination Controls -->
+                    <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+                        <span id="patient-pagination-info" class="text-sm text-slate-500 font-medium">Showing 0 entries</span>
+                        <div class="flex gap-2">
+                            <button id="btn-patient-prev" class="px-4 py-2 border border-slate-300 rounded bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-semibold">Previous</button>
+                            <button id="btn-patient-next" class="px-4 py-2 border border-slate-300 rounded bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-semibold">Next</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -180,6 +190,23 @@
                             title="Please enter exactly 11 digits" required
                             class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500">
                     </div>
+                    <div><label class="block text-sm font-semibold text-slate-700">Blood Type</label><select name="blood_type"
+                            class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500">
+                            <option value="">Unknown</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                        </select></div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700">Allergies & Medical Conditions</label>
+                    <input type="text" name="allergies" placeholder="e.g., Asthma, Peanut Allergy (Leave blank if none)"
+                            class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500">
                 </div>
                 <div class="flex justify-end space-x-3 mt-6">
                     <button type="button" id="btn-close-modal"
@@ -237,6 +264,23 @@
                             maxlength="11" title="Please enter exactly 11 digits" required
                             class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500">
                     </div>
+                    <div><label class="block text-sm font-semibold text-slate-700">Blood Type</label><select id="edit_blood_type" name="blood_type"
+                            class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500">
+                            <option value="">Unknown</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                        </select></div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700">Allergies & Medical Conditions</label>
+                    <input type="text" id="edit_allergies" name="allergies" placeholder="e.g., Asthma, Peanut Allergy (Leave blank if none)"
+                            class="w-full border border-slate-300 p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500">
                 </div>
                 <div class="flex justify-end space-x-3 mt-6">
                     <button type="button" id="btn-close-edit-modal"
@@ -271,7 +315,7 @@
                             class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-slate-700 min-h-[40px]">
                         </div>
                     </div>
-                    <div><label class="block text-sm font-semibold text-slate-700">Birth Date</label>
+                    <div><label class="block text-sm font-semibold text-slate-700">Birth Date & Age</label>
                         <div id="view_birth_date"
                             class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-slate-700 min-h-[40px]">
                         </div>
@@ -305,6 +349,17 @@
                         <div id="view_emergency_contact_no"
                             class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-slate-700 min-h-[40px]">
                         </div>
+                    </div>
+                    <div><label class="block text-sm font-semibold text-slate-700">Blood Type</label>
+                        <div id="view_blood_type"
+                            class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-slate-700 min-h-[40px] font-bold text-rose-500">
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700">Allergies & Medical Conditions</label>
+                    <div id="view_allergies"
+                        class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-slate-700 min-h-[40px] font-bold text-rose-600">
                     </div>
                 </div>
                 <div class="flex justify-end space-x-3 mt-6">

@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 1. Load and Render Patients
     const tableBody = document.getElementById('patients-table-body');
     let allPatients: any[] = [];
+    let lastPatientsDataStr = '';
 
     async function loadPatients(silent = false) {
         if (!tableBody) return;
@@ -29,7 +30,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!silent) {
                 tableBody.innerHTML = '<tr><td colspan="5" class="py-4 text-center">Loading...</td></tr>';
             }
-            allPatients = await fetchPatients();
+            const fetchedPatients = await fetchPatients();
+            
+            const newDataStr = JSON.stringify(fetchedPatients);
+            if (silent && newDataStr === lastPatientsDataStr) return;
+            lastPatientsDataStr = newDataStr;
+            allPatients = fetchedPatients;
             
             // Only re-render if we're not currently searching
             const searchInput = document.getElementById('search-input') as HTMLInputElement;
@@ -52,20 +58,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    let currentPatientPage = 1;
+    const patientsPerPage = 15;
+
     function renderPatients(patientsToRender: any[]) {
         if (!tableBody) return;
         tableBody.innerHTML = '';
         
-        if (patientsToRender.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-slate-500">No patients found.</td></tr>';
-            return;
-        }
+        const totalItems = patientsToRender.length;
+        const totalPages = Math.ceil(totalItems / patientsPerPage) || 1;
+        
+        if (currentPatientPage > totalPages) currentPatientPage = totalPages;
+        if (currentPatientPage < 1) currentPatientPage = 1;
 
-        patientsToRender.forEach((p: any) => {
+        const startIndex = (currentPatientPage - 1) * patientsPerPage;
+        const endIndex = Math.min(startIndex + patientsPerPage, totalItems);
+        const pageItems = patientsToRender.slice(startIndex, endIndex);
+
+        if (pageItems.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="7" class="py-4 text-center text-slate-500">No patients found.</td></tr>';
+        } else {
+            pageItems.forEach((p: any) => {
             const tr = document.createElement('tr');
             tr.className = "border-b border-slate-100 hover:bg-slate-50 transition-colors";
             const lastVisit = p.last_visit ? new Date(p.last_visit).toLocaleDateString() : (p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A');
             const visitCount = p.visit_count != null ? Number(p.visit_count) : 0;
+
+            let alertsHtml = 'None';
+            if (p.medical_background) {
+                try {
+                    const mb = typeof p.medical_background === 'string' ? JSON.parse(p.medical_background) : p.medical_background;
+                    if (mb && mb.allergies && mb.allergies.trim() !== '') {
+                        alertsHtml = `<span class="text-rose-600 font-bold">${escapeHTML(mb.allergies)}</span>`;
+                    }
+                } catch(e) {}
+            }
 
             tr.innerHTML = `
                 <td class="px-4 py-5 border-r border-slate-100 last:border-r-0 font-medium">${escapeHTML(p.student_no)}</td>
@@ -73,6 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td class="px-4 py-5 border-r border-slate-100 last:border-r-0">${escapeHTML(p.level_section) || 'N/A'}</td>
                 <td class="px-4 py-5 border-r border-slate-100 last:border-r-0">${escapeHTML(String(visitCount))}</td>
                 <td class="px-4 py-5 border-r border-slate-100 last:border-r-0">${escapeHTML(lastVisit)}</td>
+                <td class="px-4 py-5 border-r border-slate-100 last:border-r-0">${alertsHtml}</td>
                 <td class="px-4 py-5 flex items-center justify-center space-x-2">
                     <button data-id="${p.patient_id}" class="btn-history-patient bg-slate-600 hover:bg-slate-700 text-white px-4 py-1.5 rounded text-xs font-semibold transition-colors">History</button>
                     <button data-id="${p.patient_id}" class="btn-view-patient bg-[#0078d4] hover:bg-blue-600 text-white px-4 py-1.5 rounded text-xs font-semibold transition-colors">View</button>
@@ -81,6 +109,58 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </td>
             `;
             tableBody.appendChild(tr);
+        });
+        }
+
+        const patientPaginationInfo = document.getElementById('patient-pagination-info');
+        const btnPatientPrev = document.getElementById('btn-patient-prev') as HTMLButtonElement;
+        const btnPatientNext = document.getElementById('btn-patient-next') as HTMLButtonElement;
+
+        if (patientPaginationInfo) {
+            patientPaginationInfo.textContent = totalItems === 0 
+                ? 'Showing 0 entries' 
+                : `Showing ${startIndex + 1} to ${endIndex} of ${totalItems} entries`;
+        }
+        
+        if (btnPatientPrev) btnPatientPrev.disabled = currentPatientPage === 1;
+        if (btnPatientNext) btnPatientNext.disabled = currentPatientPage === totalPages;
+    }
+
+    const btnPatientPrev = document.getElementById('btn-patient-prev');
+    const btnPatientNext = document.getElementById('btn-patient-next');
+
+    if (btnPatientPrev) {
+        btnPatientPrev.addEventListener('click', () => {
+            if (currentPatientPage > 1) {
+                currentPatientPage--;
+                // Re-apply search filter
+                const searchInput = document.getElementById('search-input') as HTMLInputElement;
+                let filtered = allPatients;
+                if (searchInput && searchInput.value) {
+                    const query = searchInput.value.toLowerCase();
+                    filtered = allPatients.filter(p => 
+                        (p.first_name + ' ' + p.last_name).toLowerCase().includes(query) || 
+                        p.student_no.toLowerCase().includes(query)
+                    );
+                }
+                renderPatients(filtered);
+            }
+        });
+    }
+
+    if (btnPatientNext) {
+        btnPatientNext.addEventListener('click', () => {
+            currentPatientPage++;
+            const searchInput = document.getElementById('search-input') as HTMLInputElement;
+            let filtered = allPatients;
+            if (searchInput && searchInput.value) {
+                const query = searchInput.value.toLowerCase();
+                filtered = allPatients.filter(p => 
+                    (p.first_name + ' ' + p.last_name).toLowerCase().includes(query) || 
+                    p.student_no.toLowerCase().includes(query)
+                );
+            }
+            renderPatients(filtered);
         });
     }
 
@@ -129,6 +209,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const searchInput = document.getElementById('search-input') as HTMLInputElement;
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
+            currentPatientPage = 1;
             const query = (e.target as HTMLInputElement).value.toLowerCase();
             const filtered = allPatients.filter(p => 
                 (p.first_name + ' ' + p.last_name).toLowerCase().includes(query) || 
@@ -153,6 +234,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!confirm("Are you sure you want to save this data?")) return;
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
+            
+            // Package medical background
+            const medicalBackground = {
+                allergies: data.allergies || '',
+                blood_type: data.blood_type || '',
+                contact_no: data.contact_no || ''
+            };
+            (data as any).medical_background = JSON.stringify(medicalBackground);
             
             try {
                 await createPatient(data);
@@ -223,16 +312,47 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (id && viewModal) {
                     try {
                         const patient = await fetchPatient(id);
+                        
+                        // Parse medical background
+                        let allergies = 'None';
+                        let bloodType = 'Unknown';
+                        let contactNo = 'N/A';
+                        if (patient.medical_background) {
+                            try {
+                                const mb = typeof patient.medical_background === 'string' ? JSON.parse(patient.medical_background) : patient.medical_background;
+                                if (mb) {
+                                    if (mb.allergies) allergies = mb.allergies;
+                                    if (mb.blood_type) bloodType = mb.blood_type;
+                                    if (mb.contact_no) contactNo = mb.contact_no;
+                                }
+                            } catch(e) {}
+                        }
+
+                        // Calculate Age
+                        let ageStr = '';
+                        let birthDateDisplay = 'N/A';
+                        if (patient.birth_date) {
+                            const bd = new Date(patient.birth_date);
+                            birthDateDisplay = bd.toLocaleDateString();
+                            const ageDifMs = Date.now() - bd.getTime();
+                            const ageDate = new Date(ageDifMs);
+                            const calculatedAge = Math.abs(ageDate.getUTCFullYear() - 1970);
+                            ageStr = ` (${calculatedAge} years old)`;
+                        }
+
                         document.getElementById('view_student_no')!.textContent = patient.student_no;
                         document.getElementById('view_full_name')!.textContent = `${patient.first_name} ${patient.last_name}`;
                         document.getElementById('view_gender')!.textContent = patient.gender;
-                        document.getElementById('view_birth_date')!.textContent = patient.birth_date ? new Date(patient.birth_date).toLocaleDateString() : 'N/A';
+                        document.getElementById('view_birth_date')!.textContent = `${birthDateDisplay}${ageStr}`;
                         document.getElementById('view_level_section')!.textContent = patient.level_section || 'N/A';
                         document.getElementById('view_visit_count')!.textContent = String(patient.visit_count != null ? patient.visit_count : 0);
                         document.getElementById('view_last_visit')!.textContent = patient.last_visit ? new Date(patient.last_visit).toLocaleDateString() : 'N/A';
-                        document.getElementById('view_contact_no')!.textContent = 'N/A'; // No direct contact_no in DB
+                        document.getElementById('view_contact_no')!.textContent = contactNo; 
                         document.getElementById('view_emergency_contact_name')!.textContent = patient.guardian_name || 'N/A';
                         document.getElementById('view_emergency_contact_no')!.textContent = patient.guardian_contact || 'N/A';
+                        
+                        document.getElementById('view_blood_type')!.textContent = bloodType;
+                        document.getElementById('view_allergies')!.textContent = allergies;
                         
                         viewModal.classList.remove('hidden');
                     } catch (err) {
@@ -247,15 +367,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (id && editModal && editForm) {
                     try {
                         const patient = await fetchPatient(id);
+                        
+                        let allergies = '';
+                        let bloodType = '';
+                        let contactNo = '';
+                        if (patient.medical_background) {
+                            try {
+                                const mb = typeof patient.medical_background === 'string' ? JSON.parse(patient.medical_background) : patient.medical_background;
+                                if (mb) {
+                                    if (mb.allergies) allergies = mb.allergies;
+                                    if (mb.blood_type) bloodType = mb.blood_type;
+                                    if (mb.contact_no) contactNo = mb.contact_no;
+                                }
+                            } catch(e) {}
+                        }
+
                         (document.getElementById('edit_patient_id') as HTMLInputElement).value = patient.patient_id;
                         (document.getElementById('edit_student_no') as HTMLInputElement).value = patient.student_no;
                         (document.getElementById('edit_full_name') as HTMLInputElement).value = `${patient.first_name} ${patient.last_name}`;
                         (document.getElementById('edit_gender') as HTMLSelectElement).value = patient.gender;
                         (document.getElementById('edit_birth_date') as HTMLInputElement).value = patient.birth_date ? patient.birth_date.split('T')[0] : '';
                         (document.getElementById('edit_level_section') as HTMLInputElement).value = patient.level_section || '';
-                        (document.getElementById('edit_contact_no') as HTMLInputElement).value = '';
+                        (document.getElementById('edit_contact_no') as HTMLInputElement).value = contactNo;
                         (document.getElementById('edit_emergency_contact_name') as HTMLInputElement).value = patient.guardian_name || '';
                         (document.getElementById('edit_emergency_contact_no') as HTMLInputElement).value = patient.guardian_contact || '';
+                        
+                        (document.getElementById('edit_blood_type') as HTMLSelectElement).value = bloodType;
+                        (document.getElementById('edit_allergies') as HTMLInputElement).value = allergies;
                         
                         editModal.classList.remove('hidden');
                     } catch (err) {
@@ -329,6 +467,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             const formData = new FormData(editForm);
             const data = Object.fromEntries(formData.entries());
             const id = data.patient_id as string;
+            
+            // Package medical background
+            const medicalBackground = {
+                allergies: data.allergies || '',
+                blood_type: data.blood_type || '',
+                contact_no: data.contact_no || ''
+            };
+            (data as any).medical_background = JSON.stringify(medicalBackground);
             
             try {
                 await updatePatient(id, data);

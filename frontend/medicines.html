@@ -98,6 +98,10 @@
 <span class="material-symbols-outlined text-lg">list_alt</span>
                 Order List
             </button>
+<button id="btn-export-pdf" class="bg-slate-600 hover:bg-slate-700 text-white px-6 py-2 rounded-sm font-semibold flex items-center gap-2 text-sm transition-colors shadow-sm">
+<span class="material-symbols-outlined text-lg">picture_as_pdf</span>
+                Export PDF
+            </button>
 <button id="btn-add-medicine" class="btn-add text-white px-6 py-2 rounded-sm font-semibold flex items-center gap-2 text-sm">
 <span class="material-symbols-outlined text-lg">add</span>
                 Add Medicine
@@ -289,6 +293,44 @@
                 <span class="material-symbols-outlined text-2xl">close</span>
             </button>
         </div>
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4 bg-white">
+            <div class="flex items-center gap-4 flex-1">
+                <div class="relative w-64">
+                    <input id="search-audit-log" class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded text-sm focus:ring-1 focus:ring-blue-500 outline-none" placeholder="Search medicine..." type="text">
+                    <span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+                </div>
+                <select id="filter-audit-action" class="border-slate-200 rounded py-2 px-3 text-sm focus:ring-blue-500 bg-slate-50">
+                    <option value="">All Actions</option>
+                    <option value="restock">Restock</option>
+                    <option value="dispense">Dispense</option>
+                    <option value="adjustment">Adjustment</option>
+                    <option value="expired_removal">Expired Removal</option>
+                </select>
+                <div class="flex gap-2">
+                    <select id="filter-audit-month-select" class="border-slate-200 rounded py-2 px-3 text-sm focus:ring-blue-500 bg-slate-50">
+                        <option value="">Month</option>
+                        <option value="01">Jan</option>
+                        <option value="02">Feb</option>
+                        <option value="03">Mar</option>
+                        <option value="04">Apr</option>
+                        <option value="05">May</option>
+                        <option value="06">Jun</option>
+                        <option value="07">Jul</option>
+                        <option value="08">Aug</option>
+                        <option value="09">Sep</option>
+                        <option value="10">Oct</option>
+                        <option value="11">Nov</option>
+                        <option value="12">Dec</option>
+                    </select>
+                    <select id="filter-audit-year-select" class="border-slate-200 rounded py-2 px-3 text-sm focus:ring-blue-500 bg-slate-50">
+                        <option value="">Year</option>
+                    </select>
+                </div>
+            </div>
+            <button id="btn-export-audit-pdf" class="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded text-sm font-semibold flex items-center gap-2 transition-colors">
+                <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span> Export
+            </button>
+        </div>
         <div class="p-6 overflow-y-auto flex-1">
             <table class="w-full text-left border-collapse">
                 <thead>
@@ -305,6 +347,13 @@
                     <tr><td colspan="6" class="text-center py-4 text-slate-500">Loading audit log...</td></tr>
                 </tbody>
             </table>
+        </div>
+        <div class="px-6 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50 rounded-b-lg">
+            <div class="text-sm text-slate-600" id="audit-pagination-info">Showing 0 entries</div>
+            <div class="flex space-x-2">
+                <button id="btn-audit-prev" class="px-3 py-1.5 border border-slate-300 rounded text-slate-600 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors">Previous</button>
+                <button id="btn-audit-next" class="px-3 py-1.5 border border-slate-300 rounded text-slate-600 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors">Next</button>
+            </div>
         </div>
     </div>
 </div>
@@ -337,5 +386,32 @@
 </div>
 
 <div id="global-toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded shadow-lg opacity-0 pointer-events-none transition-opacity duration-300"></div>
-<script type="module" src="/src/medicines.ts"></script>
+
+<!-- Export PDF Modal -->
+<div id="export-pdf-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-[100]">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+            <h3 class="font-bold text-lg text-slate-800">Export Inventory Report</h3>
+            <button id="btn-close-export-modal" class="text-slate-400 hover:text-slate-600">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6">
+            <p class="text-sm text-slate-600 mb-4">Select the type of inventory report you want to export as PDF.</p>
+            <div class="flex flex-col gap-3">
+                <button id="btn-export-all" class="bg-[#007BFF] hover:bg-blue-600 text-white px-4 py-3 rounded text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-lg">inventory</span> All Medicines
+                </button>
+                <button id="btn-export-out-of-stock" class="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-lg">error</span> Out of Stock Only
+                </button>
+                <button id="btn-export-expired" class="bg-red-800 hover:bg-red-900 text-white px-4 py-3 rounded text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-lg">block</span> Expired Only
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/src/medicines.ts" type="module"></script>
 </body></html>

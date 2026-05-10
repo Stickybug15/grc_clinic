@@ -1,4 +1,6 @@
 import { fetchMedicines, createMedicine, updateMedicineStock, fetchMedicine, updateMedicine, deleteMedicine, fetchInventoryMovements, fetchFullAuditLog, escapeHTML, DATA_UPDATE_KEY } from './api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 document.addEventListener('DOMContentLoaded', async () => {
     function showToast(message: string) {
@@ -100,12 +102,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    let lastMedicinesDataStr = '';
     // 1. Load and Render Medicines
-    async function loadMedicines() {
+    async function loadMedicines(silent = false) {
         try {
             if(!tableBody) return;
             
             const medicines = await fetchMedicines();
+            const newDataStr = JSON.stringify(medicines);
+            if (silent && newDataStr === lastMedicinesDataStr) return;
+            lastMedicinesDataStr = newDataStr;
+
             
             outOfStockMedicines = medicines.filter((m: any) => m.stock_qty <= 0);
             lowStockMedicines = medicines.filter((m: any) => m.stock_qty > 0 && m.stock_qty <= m.reorder_threshold);
@@ -128,13 +135,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 medicines.forEach((m: any) => {
                     const opt = document.createElement('option');
                     opt.value = m.medicine_id;
-                    opt.textContent = m.med_name;
+                    const exp = m.expiry_date ? new Date(m.expiry_date).toLocaleDateString() : 'N/A';
+                    opt.textContent = `${m.med_name} (Exp: ${exp})`;
                     selectMed.appendChild(opt);
                 });
             }
 
             // Get search term
             const searchInput = document.getElementById('search-medicine') as HTMLInputElement;
+            
+            // Check for search query param on first load
+            if (searchInput && !searchInput.dataset.initialized) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const querySearch = urlParams.get('search');
+                if (querySearch) {
+                    searchInput.value = querySearch;
+                }
+                searchInput.dataset.initialized = 'true';
+            }
+
             const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
 
             // Filter medicines
@@ -233,16 +252,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.addEventListener('storage', (event) => {
         if (event.key === DATA_UPDATE_KEY) {
-            loadMedicines();
-            loadMovements();
+            loadMedicines(true);
+            loadMovements(true);
             showToast('Medicine inventory refreshed from another tab.');
         }
     });
 
     const REFRESH_INTERVAL_MS = 10000;
     setInterval(() => {
-        loadMedicines();
-        loadMovements();
+        loadMedicines(true);
+        loadMovements(true);
     }, REFRESH_INTERVAL_MS);
 
     const searchInput = document.getElementById('search-medicine');
@@ -291,13 +310,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             const data = Object.fromEntries(formData.entries()) as Record<string, any>;
             
             try {
-                // Check for duplicates
+                // Check for duplicates (same name AND same expiration date)
                 const existingMedicines = await fetchMedicines();
                 const newMedName = String(data.med_name).trim().toLowerCase();
-                const isDuplicate = existingMedicines.some((m: any) => m.med_name.trim().toLowerCase() === newMedName);
+                const isDuplicate = existingMedicines.some((m: any) => {
+                    const isSameName = m.med_name.trim().toLowerCase() === newMedName;
+                    const isSameExpiry = m.expiry_date && data.expiry_date && m.expiry_date.startsWith(data.expiry_date);
+                    return isSameName && isSameExpiry;
+                });
                 
                 if (isDuplicate) {
-                    alert("Cannot add medicine: A medicine with this name already exists in the inventory.");
+                    alert("Cannot add medicine: A medicine with this exact name AND expiration date already exists.");
                     return;
                 }
 
@@ -447,11 +470,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 5. Load and Render Inventory Movements
     const movementsBody = document.getElementById('inventory-movements-body');
-    async function loadMovements() {
+    let lastMovementsDataStr = '';
+
+    async function loadMovements(silent = false) {
         if (!movementsBody) return;
         try {
-            movementsBody.innerHTML = '<tr><td colspan="4" class="py-4 text-center">Loading...</td></tr>';
+            if (movementsBody.children.length === 0 && !silent) {
+                movementsBody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-slate-400">Loading...</td></tr>';
+            }
             const movements = await fetchInventoryMovements();
+            const newDataStr = JSON.stringify(movements);
+            if (silent && newDataStr === lastMovementsDataStr) return;
+            lastMovementsDataStr = newDataStr;
+
             movementsBody.innerHTML = '';
             
             if (movements.length === 0) {
@@ -486,33 +517,214 @@ document.addEventListener('DOMContentLoaded', async () => {
     const modalAudit = document.getElementById('audit-log-modal');
     const btnCloseAudit = document.getElementById('btn-close-audit-log');
     const auditBody = document.getElementById('full-audit-log-body');
+    const searchAuditLog = document.getElementById('search-audit-log') as HTMLInputElement;
+    const filterAuditAction = document.getElementById('filter-audit-action') as HTMLSelectElement;
+    const filterAuditMonthSelect = document.getElementById('filter-audit-month-select') as HTMLSelectElement;
+    const filterAuditYearSelect = document.getElementById('filter-audit-year-select') as HTMLSelectElement;
+    const btnExportAuditPdf = document.getElementById('btn-export-audit-pdf');
+    const btnAuditPrev = document.getElementById('btn-audit-prev') as HTMLButtonElement;
+    const btnAuditNext = document.getElementById('btn-audit-next') as HTMLButtonElement;
+    const auditPaginationInfo = document.getElementById('audit-pagination-info');
+
+    if (filterAuditYearSelect) {
+        const currentYear = new Date().getFullYear();
+        for (let y = 2024; y <= currentYear + 10; y++) {
+            const opt = document.createElement('option');
+            opt.value = String(y);
+            opt.textContent = String(y);
+            filterAuditYearSelect.appendChild(opt);
+        }
+    }
+
+    let allAuditLogs: any[] = [];
+    let currentAuditPage = 1;
+    const auditItemsPerPage = 15;
+
+    function renderAuditLogs() {
+        if (!auditBody) return;
+        
+        let filteredLogs = allAuditLogs;
+        
+        const searchTerm = searchAuditLog ? searchAuditLog.value.toLowerCase() : '';
+        const actionFilter = filterAuditAction ? filterAuditAction.value : '';
+        const monthFilter = filterAuditMonthSelect ? filterAuditMonthSelect.value : '';
+        const yearFilter = filterAuditYearSelect ? filterAuditYearSelect.value : '';
+
+        if (searchTerm) {
+            filteredLogs = filteredLogs.filter((m: any) => m.med_name.toLowerCase().includes(searchTerm));
+        }
+        if (actionFilter) {
+            filteredLogs = filteredLogs.filter((m: any) => m.action === actionFilter);
+        }
+        if (monthFilter || yearFilter) {
+            filteredLogs = filteredLogs.filter((m: any) => {
+                if (!m.recorded_at) return false;
+                const d = new Date(m.recorded_at);
+                const mMonth = String(d.getMonth() + 1).padStart(2, '0');
+                const mYear = String(d.getFullYear());
+                
+                if (monthFilter && mMonth !== monthFilter) return false;
+                if (yearFilter && mYear !== yearFilter) return false;
+                return true;
+            });
+        }
+
+        const totalItems = filteredLogs.length;
+        const totalPages = Math.ceil(totalItems / auditItemsPerPage) || 1;
+        
+        if (currentAuditPage > totalPages) currentAuditPage = totalPages;
+        if (currentAuditPage < 1) currentAuditPage = 1;
+
+        const startIndex = (currentAuditPage - 1) * auditItemsPerPage;
+        const endIndex = Math.min(startIndex + auditItemsPerPage, totalItems);
+        const pageItems = filteredLogs.slice(startIndex, endIndex);
+
+        auditBody.innerHTML = '';
+
+        if (pageItems.length === 0) {
+            auditBody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-500">No logs found matching criteria.</td></tr>';
+        } else {
+            pageItems.forEach((m: any) => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-slate-100 hover:bg-slate-50 transition-colors';
+                const sign = m.quantity_change > 0 ? '+' : '';
+                const colorClass = m.quantity_change > 0 ? 'text-green-600' : 'text-red-600';
+                
+                let actionBadge = '';
+                if (m.notes === 'Medicine deleted from active inventory.') actionBadge = '<span class="bg-slate-200 text-slate-800 px-2 py-1 rounded text-xs font-bold">Deleted</span>';
+                else if (m.action === 'restock') actionBadge = '<span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">Restock</span>';
+                else if (m.action === 'dispense') actionBadge = '<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-bold">Dispense</span>';
+                else if (m.action === 'expired_removal') actionBadge = '<span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-bold">Expired</span>';
+                else actionBadge = '<span class="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-bold">Adjustment</span>';
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4">${new Date(m.recorded_at).toLocaleString()}</td>
+                    <td class="px-6 py-4 font-semibold text-slate-800">${m.med_name} ${m.unit ? `(${m.unit})` : ''}</td>
+                    <td class="px-6 py-4 text-center">${actionBadge}</td>
+                    <td class="px-6 py-4 text-right font-bold ${colorClass}">${sign}${m.quantity_change}</td>
+                    <td class="px-6 py-4 text-right">${m.stock_after}</td>
+                    <td class="px-6 py-4 text-slate-500 italic text-xs max-w-[200px] truncate" title="${m.notes || ''}">${m.notes || '-'}</td>
+                `;
+                auditBody.appendChild(tr);
+            });
+        }
+
+        if (auditPaginationInfo) {
+            auditPaginationInfo.textContent = totalItems === 0 
+                ? 'Showing 0 entries' 
+                : `Showing ${startIndex + 1} to ${endIndex} of ${totalItems} entries`;
+        }
+        
+        if (btnAuditPrev) btnAuditPrev.disabled = currentAuditPage === 1;
+        if (btnAuditNext) btnAuditNext.disabled = currentAuditPage === totalPages;
+    }
+
+    if (searchAuditLog) {
+        searchAuditLog.addEventListener('input', () => {
+            currentAuditPage = 1;
+            renderAuditLogs();
+        });
+    }
+
+    if (filterAuditAction) {
+        filterAuditAction.addEventListener('change', () => {
+            currentAuditPage = 1;
+            renderAuditLogs();
+        });
+    }
+
+    if (filterAuditMonthSelect) {
+        filterAuditMonthSelect.addEventListener('change', () => {
+            currentAuditPage = 1;
+            renderAuditLogs();
+        });
+    }
+
+    if (filterAuditYearSelect) {
+        filterAuditYearSelect.addEventListener('change', () => {
+            currentAuditPage = 1;
+            renderAuditLogs();
+        });
+    }
+
+    if (btnAuditPrev) {
+        btnAuditPrev.addEventListener('click', () => {
+            if (currentAuditPage > 1) {
+                currentAuditPage--;
+                renderAuditLogs();
+            }
+        });
+    }
+    
+    if (btnAuditNext) {
+        btnAuditNext.addEventListener('click', () => {
+            currentAuditPage++;
+            renderAuditLogs();
+        });
+    }
+
+    if (btnExportAuditPdf) {
+        btnExportAuditPdf.addEventListener('click', () => {
+            let filteredLogs = allAuditLogs;
+            const searchTerm = searchAuditLog ? searchAuditLog.value.toLowerCase() : '';
+            const actionFilter = filterAuditAction ? filterAuditAction.value : '';
+            const monthFilter = filterAuditMonthSelect ? filterAuditMonthSelect.value : '';
+            const yearFilter = filterAuditYearSelect ? filterAuditYearSelect.value : '';
+
+            if (searchTerm) filteredLogs = filteredLogs.filter((m: any) => m.med_name.toLowerCase().includes(searchTerm));
+            if (actionFilter) filteredLogs = filteredLogs.filter((m: any) => m.action === actionFilter);
+            if (monthFilter || yearFilter) {
+                filteredLogs = filteredLogs.filter((m: any) => {
+                    if (!m.recorded_at) return false;
+                    const d = new Date(m.recorded_at);
+                    const mMonth = String(d.getMonth() + 1).padStart(2, '0');
+                    const mYear = String(d.getFullYear());
+                    
+                    if (monthFilter && mMonth !== monthFilter) return false;
+                    if (yearFilter && mYear !== yearFilter) return false;
+                    return true;
+                });
+            }
+
+            if (filteredLogs.length === 0) {
+                alert("No logs to export.");
+                return;
+            }
+
+            const doc = new jsPDF();
+            doc.text("Inventory Audit Log Report", 14, 15);
+            
+            const tableData = filteredLogs.map((m: any) => [
+                new Date(m.recorded_at).toLocaleString(),
+                m.med_name,
+                m.action.replace('_', ' ').toUpperCase(),
+                (m.quantity_change > 0 ? '+' : '') + String(m.quantity_change),
+                String(m.stock_after),
+                m.notes || ''
+            ]);
+
+            autoTable(doc, {
+                startY: 20,
+                head: [['Timestamp', 'Medicine', 'Action', 'Change', 'Stock After', 'Notes']],
+                body: tableData,
+            });
+
+            doc.save(`audit_log_report.pdf`);
+        });
+    }
 
     if (btnViewAudit && modalAudit && btnCloseAudit && auditBody) {
         btnViewAudit.addEventListener('click', async () => {
             modalAudit.classList.remove('hidden');
             auditBody.innerHTML = '<tr><td colspan="6" class="py-8 text-center">Loading full audit log...</td></tr>';
             try {
-                const logs = await fetchFullAuditLog();
-                auditBody.innerHTML = '';
-                if(logs.length === 0) {
-                    auditBody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-500">No logs found.</td></tr>';
-                    return;
-                }
-                logs.forEach((m: any) => {
-                    const tr = document.createElement('tr');
-                    tr.className = 'border-b border-slate-100 hover:bg-slate-50 transition-colors';
-                    const sign = m.quantity_change > 0 ? '+' : '';
-                    const colorClass = m.quantity_change > 0 ? 'text-green-600' : 'text-red-600';
-                    tr.innerHTML = `
-                        <td class="px-6 py-4">${new Date(m.recorded_at).toLocaleString()}</td>
-                        <td class="px-6 py-4 font-semibold text-slate-800">${m.med_name} ${m.unit ? `(${m.unit})` : ''}</td>
-                        <td class="px-6 py-4 text-center capitalize">${m.action.replace('_', ' ')}</td>
-                        <td class="px-6 py-4 text-right font-bold ${colorClass}">${sign}${m.quantity_change}</td>
-                        <td class="px-6 py-4 text-right">${m.stock_after}</td>
-                        <td class="px-6 py-4 text-slate-500 italic text-xs max-w-[200px] truncate" title="${m.notes || ''}">${m.notes || '-'}</td>
-                    `;
-                    auditBody.appendChild(tr);
-                });
+                allAuditLogs = await fetchFullAuditLog();
+                currentAuditPage = 1;
+                if(searchAuditLog) searchAuditLog.value = '';
+                if(filterAuditAction) filterAuditAction.value = '';
+                if(filterAuditMonthSelect) filterAuditMonthSelect.value = '';
+                if(filterAuditYearSelect) filterAuditYearSelect.value = '';
+                renderAuditLogs();
             } catch(e) {
                 console.error("Failed to fetch full audit log", e);
                 auditBody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-red-500">Failed to load audit logs.</td></tr>';
@@ -577,5 +789,84 @@ document.addEventListener('DOMContentLoaded', async () => {
             modalOrderList.classList.add('hidden');
         });
     }
+
+    // Export PDF Logic
+    const btnExportPdf = document.getElementById('btn-export-pdf');
+    const exportModal = document.getElementById('export-pdf-modal');
+    const closeExportBtn = document.getElementById('btn-close-export-modal');
+
+    if (btnExportPdf && exportModal && closeExportBtn) {
+        btnExportPdf.addEventListener('click', () => exportModal.classList.remove('hidden'));
+        closeExportBtn.addEventListener('click', () => exportModal.classList.add('hidden'));
+    }
+
+    function generateInventoryPDF(filterType: 'all' | 'out_of_stock' | 'expired') {
+        fetchMedicines().then(medicines => {
+            let dataToExport = medicines;
+            let title = "Medicine Inventory Report";
+            
+            if (filterType === 'out_of_stock') {
+                dataToExport = medicines.filter((m: any) => m.stock_qty <= 0);
+                title = "Out of Stock Medicines Report";
+            } else if (filterType === 'expired') {
+                const now = new Date();
+                // Reset time to start of day for comparison
+                now.setHours(0, 0, 0, 0); 
+                dataToExport = medicines.filter((m: any) => {
+                    if (!m.expiry_date) return false;
+                    const exp = new Date(m.expiry_date);
+                    return exp < now;
+                });
+                title = "Expired Medicines Report";
+            }
+
+            if (dataToExport.length === 0) {
+                alert("No medicines found for this category to export.");
+                return;
+            }
+
+            const doc = new jsPDF();
+            doc.text(title, 14, 15);
+            
+            const tableData = dataToExport.map((m: any) => {
+                const expDateObj = m.expiry_date ? new Date(m.expiry_date) : null;
+                const now = new Date();
+                now.setHours(0,0,0,0);
+                let status = 'Available';
+                if (m.stock_qty <= 0) status = 'Out of Stock';
+                else if (expDateObj && expDateObj < now) status = 'Expired';
+                else if (m.stock_qty <= m.reorder_threshold) status = 'Low Stock';
+                else if (expDateObj) {
+                    const thirtyDays = new Date();
+                    thirtyDays.setDate(now.getDate() + 30);
+                    if (expDateObj <= thirtyDays) status = 'Expiring Soon';
+                }
+
+                return [
+                    m.med_name,
+                    m.category || 'N/A',
+                    String(m.stock_qty),
+                    m.expiry_date ? new Date(m.expiry_date).toLocaleDateString() : 'N/A',
+                    status
+                ];
+            });
+
+            autoTable(doc, {
+                startY: 20,
+                head: [['Medicine Name', 'Category', 'Quantity', 'Expiration Date', 'Status']],
+                body: tableData,
+            });
+
+            doc.save(`inventory_${filterType}.pdf`);
+            exportModal?.classList.add('hidden');
+        }).catch(err => {
+            console.error(err);
+            alert("Failed to fetch medicines for export.");
+        });
+    }
+
+    document.getElementById('btn-export-all')?.addEventListener('click', () => generateInventoryPDF('all'));
+    document.getElementById('btn-export-out-of-stock')?.addEventListener('click', () => generateInventoryPDF('out_of_stock'));
+    document.getElementById('btn-export-expired')?.addEventListener('click', () => generateInventoryPDF('expired'));
 
 });

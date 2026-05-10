@@ -98,14 +98,14 @@ app.get('/api/patients', async (req: Request, res: Response) => {
 });
 
 app.post('/api/patients', async (req: Request, res: Response) => {
-  const { student_no, full_name, gender, birth_date, level_section, emergency_contact_name, emergency_contact_no } = req.body;
+  const { student_no, full_name, gender, birth_date, level_section, emergency_contact_name, emergency_contact_no, medical_background } = req.body;
   const nameParts = full_name ? full_name.split(' ') : [];
   const first_name = nameParts[0] || '';
   const last_name = nameParts.slice(1).join(' ') || '';
   try {
     const [result] = await pool.query(
-      'INSERT INTO patients (student_no, first_name, last_name, gender, birth_date, level_section, guardian_name, guardian_contact) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [student_no, first_name, last_name, gender, birth_date, level_section, emergency_contact_name, emergency_contact_no]
+      'INSERT INTO patients (student_no, first_name, last_name, gender, birth_date, level_section, guardian_name, guardian_contact, medical_background) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [student_no, first_name, last_name, gender, birth_date, level_section, emergency_contact_name, emergency_contact_no, medical_background]
     );
     res.status(201).json({ id: (result as any).insertId, message: 'Patient created successfully' });
   } catch (error) {
@@ -133,14 +133,14 @@ app.get('/api/patients/:id', async (req: Request, res: Response): Promise<any> =
 
 app.put('/api/patients/:id', async (req: Request, res: Response): Promise<any> => {
   const { id } = req.params;
-  const { student_no, full_name, gender, birth_date, level_section, emergency_contact_name, emergency_contact_no } = req.body;
+  const { student_no, full_name, gender, birth_date, level_section, emergency_contact_name, emergency_contact_no, medical_background } = req.body;
   const nameParts = full_name ? full_name.split(' ') : [];
   const first_name = nameParts[0] || '';
   const last_name = nameParts.slice(1).join(' ') || '';
   try {
     const [result] = await pool.query(
-      'UPDATE patients SET student_no = ?, first_name = ?, last_name = ?, gender = ?, birth_date = ?, level_section = ?, guardian_name = ?, guardian_contact = ? WHERE patient_id = ?',
-      [student_no, first_name, last_name, gender, birth_date, level_section, emergency_contact_name, emergency_contact_no, id]
+      'UPDATE patients SET student_no = ?, first_name = ?, last_name = ?, gender = ?, birth_date = ?, level_section = ?, guardian_name = ?, guardian_contact = ?, medical_background = ? WHERE patient_id = ?',
+      [student_no, first_name, last_name, gender, birth_date, level_section, emergency_contact_name, emergency_contact_no, medical_background, id]
     );
     if ((result as any).affectedRows === 0) {
       return res.status(404).json({ error: 'Patient not found' });
@@ -188,7 +188,7 @@ app.get('/api/patients/:id/history', async (req: Request, res: Response) => {
 // =======================
 app.get('/api/medicines', async (req: Request, res: Response) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM medicines ORDER BY med_name ASC');
+    const [rows] = await pool.query('SELECT * FROM medicines WHERE med_name NOT LIKE "[ARCHIVED] %" ORDER BY med_name ASC');
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: sanitizeError(error) });
@@ -280,7 +280,7 @@ app.put('/api/medicines/:id', async (req: Request, res: Response): Promise<any> 
 app.delete('/api/medicines/:id', async (req: Request, res: Response): Promise<any> => {
   const { id } = req.params;
   try {
-    const [medicineRows] = await pool.query('SELECT medicine_id, stock_qty FROM medicines WHERE medicine_id = ?', [id]);
+    const [medicineRows] = await pool.query('SELECT medicine_id, stock_qty, med_name FROM medicines WHERE medicine_id = ?', [id]);
     if ((medicineRows as any[]).length === 0) {
       return res.status(404).json({ error: 'Medicine not found' });
     }
@@ -291,9 +291,18 @@ app.delete('/api/medicines/:id', async (req: Request, res: Response): Promise<an
     }
 
     await pool.query('START TRANSACTION');
-    await pool.query('DELETE FROM stock_ledger WHERE medicine_id = ?', [id]);
-    await pool.query('DELETE FROM dispensing_records WHERE medicine_id = ?', [id]);
-    const [result] = await pool.query('DELETE FROM medicines WHERE medicine_id = ?', [id]);
+    // Add deletion audit log using 'adjustment' to prevent ENUM errors
+    await pool.query(
+      'INSERT INTO stock_ledger (medicine_id, action, quantity_change, stock_after, notes) VALUES (?, ?, ?, ?, ?)',
+      [id, 'adjustment', 0, 0, 'Medicine deleted from active inventory.']
+    );
+
+    // Soft delete the medicine, use 0 instead of -1 for reorder_threshold to prevent UNSIGNED errors
+    const [result] = await pool.query(
+      'UPDATE medicines SET med_name = CONCAT("[ARCHIVED] ", med_name), stock_qty = 0, reorder_threshold = 0 WHERE medicine_id = ?', 
+      [id]
+    );
+
     if ((result as any).affectedRows === 0) {
       await pool.query('ROLLBACK');
       return res.status(404).json({ error: 'Medicine not found' });
@@ -421,11 +430,11 @@ app.get('/api/consultations/:id', async (req: Request, res: Response): Promise<a
 
 app.put('/api/consultations/:id', async (req: Request, res: Response): Promise<any> => {
   const { id } = req.params;
-  const { symptoms, treatment, remarks, followup_required } = req.body;
+  const { symptoms, treatment, remarks, vital_signs, followup_required } = req.body;
   try {
     const [result] = await pool.query(
-      'UPDATE consultations SET symptoms = ?, treatment = ?, remarks = ?, followup_required = ? WHERE consult_id = ?',
-      [symptoms, treatment, remarks, followup_required ? 1 : 0, id]
+      'UPDATE consultations SET symptoms = ?, treatment = ?, remarks = ?, vital_signs = ?, followup_required = ? WHERE consult_id = ?',
+      [symptoms, treatment, remarks, JSON.stringify(vital_signs || {}), followup_required ? 1 : 0, id]
     );
     if ((result as any).affectedRows === 0) return res.status(404).json({ error: 'Consultation not found' });
     res.json({ message: 'Consultation updated successfully' });

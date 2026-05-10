@@ -60,34 +60,69 @@
 </div>
 
 <div class="max-w-[1200px] mx-auto px-12 pb-12">
-    <!-- Header -->
-    <div class="flex items-end justify-between mb-8">
-        <div>
-            <h2 class="text-3xl font-black text-slate-800 tracking-tight">Consultations History</h2>
-            <p class="text-slate-500 font-medium mt-2">Manage patient visits and treatments.</p>
+    <!-- Header Controls -->
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-4 flex-1">
+            <div class="relative w-72">
+                <input id="search-consultation" class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-shadow" placeholder="Search patient or symptoms..." type="text">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+            </div>
+            <div class="flex gap-2">
+                <select id="filter-consultation-month" class="bg-white border border-slate-200 rounded-lg py-2.5 px-3 text-sm focus:ring-2 focus:ring-blue-500 shadow-sm outline-none">
+                    <option value="">Month</option>
+                    <option value="01">Jan</option>
+                    <option value="02">Feb</option>
+                    <option value="03">Mar</option>
+                    <option value="04">Apr</option>
+                    <option value="05">May</option>
+                    <option value="06">Jun</option>
+                    <option value="07">Jul</option>
+                    <option value="08">Aug</option>
+                    <option value="09">Sep</option>
+                    <option value="10">Oct</option>
+                    <option value="11">Nov</option>
+                    <option value="12">Dec</option>
+                </select>
+                <select id="filter-consultation-year" class="bg-white border border-slate-200 rounded-lg py-2.5 px-3 text-sm focus:ring-2 focus:ring-blue-500 shadow-sm outline-none">
+                    <option value="">Year</option>
+                </select>
+            </div>
         </div>
-        <button id="btn-add-consultation" class="bg-[#007BFF] hover:bg-blue-600 text-white px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 transition-all shadow-sm">
-            <span class="material-symbols-outlined text-[20px]">add</span> Add Consultation
-        </button>
+        <div class="flex items-center gap-3">
+            <button id="btn-export-consultation-pdf" class="bg-slate-700 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 transition-all shadow-sm">
+                <span class="material-symbols-outlined text-[20px]">picture_as_pdf</span> Export PDF
+            </button>
+            <button id="btn-add-consultation" class="bg-[#007BFF] hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 transition-all shadow-sm">
+                <span class="material-symbols-outlined text-[20px]">add</span> Add Consultation
+            </button>
+        </div>
     </div>
 
     <!-- Consultations Table -->
     <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
-        <div class="overflow-x-auto pb-6">
+        <div class="overflow-x-auto">
             <table class="w-full text-center border-collapse">
                 <thead>
-                    <tr class="bg-white border-b border-slate-200">
-                        <th class="px-6 py-6 font-bold text-slate-800 border-r border-slate-200">Date/Time</th>
-                        <th class="px-6 py-6 font-bold text-slate-800 border-r border-slate-200">Patient Name</th>
-                        <th class="px-6 py-6 font-bold text-slate-800 border-r border-slate-200">Symptoms</th>
-                        <th class="px-6 py-6 font-bold text-slate-800 border-r border-slate-200">Treatment</th>
-                        <th class="px-6 py-6 font-bold text-slate-800">Action</th>
+                    <tr class="bg-slate-50 border-b border-slate-200">
+                        <th class="px-6 py-4 font-bold text-slate-700 border-r border-slate-200">Date/Time</th>
+                        <th class="px-6 py-4 font-bold text-slate-700 border-r border-slate-200">Patient Name</th>
+                        <th class="px-6 py-4 font-bold text-slate-700 border-r border-slate-200">Symptoms & Vitals</th>
+                        <th class="px-6 py-4 font-bold text-slate-700 border-r border-slate-200">Treatment</th>
+                        <th class="px-6 py-4 font-bold text-slate-700">Action</th>
                     </tr>
                 </thead>
                 <tbody id="consultations-table-body" class="text-sm text-slate-600">
                     <!-- Data populated via JS -->
                 </tbody>
             </table>
+        </div>
+        <!-- Pagination Controls -->
+        <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+            <span id="consultation-pagination-info" class="text-sm text-slate-500 font-medium">Showing 0 entries</span>
+            <div class="flex gap-2">
+                <button id="btn-consultation-prev" class="px-4 py-2 border border-slate-300 rounded bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-semibold">Previous</button>
+                <button id="btn-consultation-next" class="px-4 py-2 border border-slate-300 rounded bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-semibold">Next</button>
+            </div>
         </div>
     </div>
 </div>
@@ -98,14 +133,18 @@
     <div class="bg-white rounded-lg p-8 w-full max-w-4xl shadow-xl relative my-auto">
         <h3 class="text-2xl font-bold mb-6 text-slate-800">Record New Consultation</h3>
         <form id="form-add-consultation" class="space-y-6">
-            <div class="grid grid-cols-2 gap-8">
+            <div class="grid grid-cols-3 gap-6">
                 <div class="flex flex-col">
                     <label class="text-sm font-bold text-slate-800 mb-2">Select Patient</label>
-                    <select id="select-patient" name="patient_id" required class="border-slate-300 rounded p-2 text-sm"></select>
+                    <select id="select-patient" name="patient_id" required class="border-slate-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500"></select>
                 </div>
                 <div class="flex flex-col">
                     <label class="text-sm font-bold text-slate-800 mb-2">Symptoms</label>
-                    <input type="text" name="symptoms" required placeholder="e.g. Fever, Headache" class="border-slate-300 rounded p-2 text-sm">
+                    <input type="text" name="symptoms" required placeholder="e.g. Fever, Headache" class="border-slate-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-sm font-bold text-slate-800 mb-2">Temperature (°C)</label>
+                    <input type="number" step="0.1" name="temperature" placeholder="e.g. 37.5" class="border-slate-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
                 </div>
             </div>
             
@@ -157,20 +196,31 @@
         <h3 class="text-2xl font-bold mb-6 text-slate-800">Edit Consultation</h3>
         <form id="form-edit-consultation" class="space-y-6">
             <input type="hidden" name="consultation_id" id="edit_consultation_id">
-            <div class="grid grid-cols-2 gap-8">
+            <div class="grid grid-cols-3 gap-6">
                 <div class="flex flex-col">
                     <label class="text-sm font-bold text-slate-800 mb-2">Patient</label>
                     <input type="text" id="edit_patient_name" disabled class="border-slate-300 rounded p-2 text-sm bg-slate-100">
                 </div>
                 <div class="flex flex-col">
                     <label class="text-sm font-bold text-slate-800 mb-2">Symptoms</label>
-                    <input type="text" name="symptoms" id="edit_symptoms" required class="border-slate-300 rounded p-2 text-sm">
+                    <input type="text" name="symptoms" id="edit_symptoms" required class="border-slate-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-sm font-bold text-slate-800 mb-2">Temperature (°C)</label>
+                    <input type="number" step="0.1" name="temperature" id="edit_temperature" placeholder="e.g. 37.5" class="border-slate-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
                 </div>
             </div>
             
-            <div class="flex flex-col">
-                <label class="text-sm font-bold text-slate-800 mb-2">Treatment Provided</label>
-                <input type="text" name="treatment" id="edit_treatment" required class="border-slate-300 rounded p-2 text-sm" placeholder="e.g. Rest, Medication">
+            <div class="border border-slate-300 p-6 rounded">
+                <h3 class="text-sm font-bold text-slate-800 mb-4">Treatment Provided</h3>
+                <div class="grid grid-cols-3 gap-y-4">
+                    <label class="flex items-center gap-3 cursor-pointer"><input name="edit_treatment_option" value="Rest" type="checkbox"/><span class="text-sm text-slate-700">Rest</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input name="edit_treatment_option" value="First Aid" type="checkbox"/><span class="text-sm text-slate-700">First Aid</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input name="edit_treatment_option" value="Medication" type="checkbox"/><span class="text-sm text-slate-700">Medication</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input name="edit_treatment_option" value="Consult" type="checkbox"/><span class="text-sm text-slate-700">Consult</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input name="edit_treatment_option" value="Referred to Hospital" type="checkbox"/><span class="text-sm text-slate-700">Referred to Hospital</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input name="edit_treatment_option" value="Sent Home" type="checkbox"/><span class="text-sm text-slate-700">Sent Home</span></label>
+                </div>
             </div>
 
             <div class="flex flex-col">
