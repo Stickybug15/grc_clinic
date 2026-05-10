@@ -1,4 +1,6 @@
-import { fetchPatients, createPatient, fetchPatient, updatePatient, deletePatient, escapeHTML, DATA_UPDATE_KEY } from './api';
+import { fetchPatients, createPatient, fetchPatient, updatePatient, deletePatient, fetchPatientHistory, escapeHTML, DATA_UPDATE_KEY } from './api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 document.addEventListener('DOMContentLoaded', async () => {
     function showToast(message: string) {
@@ -21,15 +23,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tableBody = document.getElementById('patients-table-body');
     let allPatients: any[] = [];
 
-    async function loadPatients() {
+    async function loadPatients(silent = false) {
         if (!tableBody) return;
         try {
-            tableBody.innerHTML = '<tr><td colspan="5" class="py-4 text-center">Loading...</td></tr>';
+            if (!silent) {
+                tableBody.innerHTML = '<tr><td colspan="5" class="py-4 text-center">Loading...</td></tr>';
+            }
             allPatients = await fetchPatients();
-            renderPatients(allPatients);
+            
+            // Only re-render if we're not currently searching
+            const searchInput = document.getElementById('search-input') as HTMLInputElement;
+            if (!searchInput || !searchInput.value) {
+                renderPatients(allPatients);
+            } else {
+                // If there's an active search, re-apply the filter on the new data
+                const query = searchInput.value.toLowerCase();
+                const filtered = allPatients.filter(p => 
+                    (p.first_name + ' ' + p.last_name).toLowerCase().includes(query) || 
+                    p.student_no.toLowerCase().includes(query)
+                );
+                renderPatients(filtered);
+            }
         } catch (e) {
             console.error('Failed to load patients', e);
-            tableBody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-red-500">Failed to load patients.</td></tr>';
+            if (!silent) {
+                tableBody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-red-500">Failed to load patients.</td></tr>';
+            }
         }
     }
 
@@ -55,6 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td class="px-4 py-5 border-r border-slate-100 last:border-r-0">${escapeHTML(String(visitCount))}</td>
                 <td class="px-4 py-5 border-r border-slate-100 last:border-r-0">${escapeHTML(lastVisit)}</td>
                 <td class="px-4 py-5 flex items-center justify-center space-x-2">
+                    <button data-id="${p.patient_id}" class="btn-history-patient bg-slate-600 hover:bg-slate-700 text-white px-4 py-1.5 rounded text-xs font-semibold transition-colors">History</button>
                     <button data-id="${p.patient_id}" class="btn-view-patient bg-[#0078d4] hover:bg-blue-600 text-white px-4 py-1.5 rounded text-xs font-semibold transition-colors">View</button>
                     <button data-id="${p.patient_id}" class="btn-edit-patient bg-[#10b981] hover:bg-emerald-600 text-white px-4 py-1.5 rounded text-xs font-semibold transition-colors">Edit</button>
                     <button data-id="${p.patient_id}" class="btn-delete-patient bg-[#ef4444] hover:bg-red-600 text-white px-4 py-1.5 rounded text-xs font-semibold transition-colors">Delete</button>
@@ -68,13 +88,42 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.addEventListener('storage', (event) => {
         if (event.key === DATA_UPDATE_KEY) {
-            loadPatients();
+            loadPatients(true);
             showToast('Patient data refreshed from another tab.');
         }
     });
 
     const REFRESH_INTERVAL_MS = 10000;
-    setInterval(loadPatients, REFRESH_INTERVAL_MS);
+    setInterval(() => loadPatients(true), REFRESH_INTERVAL_MS);
+
+    // 1.2 Export All Patients to PDF
+    const btnExportPatients = document.getElementById('btn-export-patients');
+    if (btnExportPatients) {
+        btnExportPatients.addEventListener('click', () => {
+            if (allPatients.length === 0) {
+                alert("No patients to export.");
+                return;
+            }
+            const doc = new jsPDF();
+            doc.text("Patient Records", 14, 15);
+            
+            const tableData = allPatients.map(p => [
+                p.student_no,
+                `${p.first_name} ${p.last_name}`,
+                p.level_section || 'N/A',
+                p.visit_count || 0,
+                p.last_visit ? new Date(p.last_visit).toLocaleDateString() : 'N/A'
+            ]);
+
+            autoTable(doc, {
+                startY: 20,
+                head: [['Student No', 'Full Name', 'Level / Section', 'Visits', 'Last Visit']],
+                body: tableData,
+            });
+
+            doc.save('patient_records.pdf');
+        });
+    }
 
     // 1.5 Search Logic
     const searchInput = document.getElementById('search-input') as HTMLInputElement;
@@ -127,6 +176,41 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (closeEditBtn && editModal) closeEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
     if (closeViewBtn && viewModal) closeViewBtn.addEventListener('click', () => viewModal.classList.add('hidden'));
+
+    const historyModal = document.getElementById('history-patient-modal');
+    const closeHistoryBtn = document.getElementById('btn-close-history-modal');
+    if (closeHistoryBtn && historyModal) closeHistoryBtn.addEventListener('click', () => historyModal.classList.add('hidden'));
+
+    let currentHistoryData: any[] = [];
+    let currentPatientName = '';
+
+    const btnExportHistoryPdf = document.getElementById('btn-export-history-pdf');
+    if (btnExportHistoryPdf) {
+        btnExportHistoryPdf.addEventListener('click', () => {
+            if (!currentHistoryData || currentHistoryData.length === 0) {
+                alert("No medical history available to export.");
+                return;
+            }
+            const doc = new jsPDF();
+            doc.text(`Medical History - ${currentPatientName}`, 14, 15);
+            
+            const tableData = currentHistoryData.map(record => [
+                new Date(record.visit_timestamp).toLocaleString(),
+                record.symptoms || '',
+                record.treatment || 'N/A',
+                record.dispensed_medicines || 'None',
+                record.remarks || ''
+            ]);
+
+            autoTable(doc, {
+                startY: 20,
+                head: [['Date', 'Symptoms', 'Treatment', 'Dispensed Medicines', 'Remarks']],
+                body: tableData,
+            });
+
+            doc.save(`medical_history_${currentPatientName.replace(/\\s+/g, '_')}.pdf`);
+        });
+    }
 
     // Handle View, Edit, and Delete button clicks
     if (tableBody) {
@@ -189,6 +273,48 @@ document.addEventListener('DOMContentLoaded', async () => {
                         loadPatients();
                     } catch (err) {
                         alert("Failed to delete patient: " + err);
+                    }
+                }
+            }
+
+            // History Patient
+            if (target.classList.contains('btn-history-patient')) {
+                const id = target.getAttribute('data-id');
+                if (id && historyModal) {
+                    try {
+                        const historyBody = document.getElementById('history-table-body');
+                        if (historyBody) {
+                            historyBody.innerHTML = '<tr><td colspan="5" class="py-4 text-center">Loading history...</td></tr>';
+                            historyModal.classList.remove('hidden');
+                            
+                            const historyData = await fetchPatientHistory(id);
+                            currentHistoryData = historyData;
+                            const patientRecord = allPatients.find(p => String(p.patient_id) === id);
+                            currentPatientName = patientRecord ? `${patientRecord.first_name} ${patientRecord.last_name}` : 'Unknown';
+                            historyBody.innerHTML = '';
+                            
+                            if (historyData.length === 0) {
+                                historyBody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-slate-500">No medical history found.</td></tr>';
+                            } else {
+                                historyData.forEach((record: any) => {
+                                    const tr = document.createElement('tr');
+                                    tr.className = "border-b border-slate-100 hover:bg-slate-50";
+                                    const visitDate = new Date(record.visit_timestamp).toLocaleString();
+                                    
+                                    tr.innerHTML = `
+                                        <td class="px-4 py-3 whitespace-nowrap">${escapeHTML(visitDate)}</td>
+                                        <td class="px-4 py-3">${escapeHTML(record.symptoms)}</td>
+                                        <td class="px-4 py-3">${escapeHTML(record.treatment || 'N/A')}</td>
+                                        <td class="px-4 py-3">${escapeHTML(record.dispensed_medicines || 'None')}</td>
+                                        <td class="px-4 py-3">${escapeHTML(record.remarks || '')}</td>
+                                    `;
+                                    historyBody.appendChild(tr);
+                                });
+                            }
+                        }
+                    } catch (err) {
+                        alert("Failed to load patient history.");
+                        historyModal.classList.add('hidden');
                     }
                 }
             }

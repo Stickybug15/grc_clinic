@@ -31,7 +31,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Simple logic for expiring soon: within 30 days
         const thirtyDaysFromNow = new Date();
         thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-        const medsExpiring = medicines.filter((m: any) => m.stock_qty > 0 && new Date(m.expiry_date) <= thirtyDaysFromNow).length;
+        const nowTime = new Date().getTime();
+        const medsExpiring = medicines.filter((m: any) => {
+            if (m.stock_qty <= 0) return false;
+            const expTime = new Date(m.expiry_date).getTime();
+            return expTime >= nowTime && expTime <= thirtyDaysFromNow.getTime();
+        }).length;
 
         // Render stats
         document.getElementById('stat-patients-today')!.textContent = String(patientsToday);
@@ -99,15 +104,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                         `;
                     }
                 }
-                // Expiring Soon
-                if (new Date(m.expiry_date) <= thirtyDaysFromNow) {
+                // Expiry Alerts
+                const expDate = new Date(m.expiry_date);
+                if (expDate < new Date()) {
+                    // Expired
+                    const alertKey = `expired_${m.medicine_id}`;
+                    if (!dismissedAlerts[alertKey]) {
+                        alertsContainer.innerHTML += `
+                            <div class="alert-item flex items-center justify-between py-4 border-t border-slate-200" data-alert-key="${alertKey}">
+                                <div class="flex items-center gap-4">
+                                    <span class="material-symbols-outlined text-red-600">block</span>
+                                    <p class="text-sm font-bold text-red-600">${m.med_name} is already EXPIRED (${expDate.toLocaleDateString()})</p>
+                                </div>
+                                <button class="btn-dismiss-alert text-slate-400 hover:text-slate-600" title="Dismiss for 24h"><span class="material-symbols-outlined text-[18px]">close</span></button>
+                            </div>
+                        `;
+                    }
+                } else if (expDate <= thirtyDaysFromNow) {
+                    // Expiring Soon
                     const alertKey = `expiring_${m.medicine_id}`;
                     if (!dismissedAlerts[alertKey]) {
                         alertsContainer.innerHTML += `
                             <div class="alert-item flex items-center justify-between py-4 border-t border-slate-200" data-alert-key="${alertKey}">
                                 <div class="flex items-center gap-4">
                                     <span class="material-symbols-outlined text-amber-500">schedule</span>
-                                    <p class="text-sm font-semibold text-slate-700">${m.med_name} is expiring soon (${new Date(m.expiry_date).toLocaleDateString()})</p>
+                                    <p class="text-sm font-semibold text-slate-700">${m.med_name} is expiring soon (${expDate.toLocaleDateString()})</p>
                                 </div>
                                 <button class="btn-dismiss-alert text-slate-400 hover:text-slate-600" title="Dismiss for 24h"><span class="material-symbols-outlined text-[18px]">close</span></button>
                             </div>

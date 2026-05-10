@@ -65,6 +65,13 @@ export async function deletePatient(id: string) {
   return result;
 }
 
+export async function fetchPatientHistory(id: string) {
+  const response = await fetch(`${API_URL}/patients/${id}/history?_t=${Date.now()}`);
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Failed to fetch patient history');
+  return result;
+}
+
 export async function fetchMedicines() {
   const response = await fetch(`${API_URL}/medicines?_t=${Date.now()}`);
   const result = await response.json();

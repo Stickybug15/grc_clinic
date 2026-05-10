@@ -85,7 +85,10 @@ app.get('/api/patients', async (req: Request, res: Response) => {
              MAX(c.visit_timestamp) AS last_visit
       FROM patients p
       LEFT JOIN consultations c ON p.patient_id = c.patient_id
-      GROUP BY p.patient_id
+      GROUP BY p.patient_id, p.student_no, p.first_name, p.last_name, p.middle_name,
+               p.level_section, p.birth_date, p.gender, p.guardian_name,
+               p.guardian_contact, p.medical_background, p.is_enrolled,
+               p.created_at, p.updated_at
       ORDER BY p.created_at DESC
     `);
     res.json(rows);
@@ -156,6 +159,25 @@ app.delete('/api/patients/:id', async (req: Request, res: Response): Promise<any
       return res.status(404).json({ error: 'Patient not found' });
     }
     res.json({ message: 'Patient deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: sanitizeError(error) });
+  }
+});
+
+app.get('/api/patients/:id/history', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const [rows] = await pool.query(`
+      SELECT c.consult_id, c.visit_timestamp, c.symptoms, c.treatment, c.remarks,
+             (SELECT GROUP_CONCAT(CONCAT(m.med_name, ' (Qty: ', dr.qty_issued, ')') SEPARATOR ', ')
+              FROM dispensing_records dr
+              JOIN medicines m ON dr.medicine_id = m.medicine_id
+              WHERE dr.consult_id = c.consult_id) AS dispensed_medicines
+      FROM consultations c
+      WHERE c.patient_id = ?
+      ORDER BY c.visit_timestamp DESC
+    `, [id]);
+    res.json(rows);
   } catch (error) {
     res.status(500).json({ error: sanitizeError(error) });
   }

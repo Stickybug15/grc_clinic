@@ -17,7 +17,89 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 3000);
     }
 
+    function showRestockTimer(medName: string) {
+        const alertId = 'restock-alert-' + Date.now();
+        const alertDiv = document.createElement('div');
+        alertDiv.id = alertId;
+        alertDiv.className = 'fixed top-24 right-5 z-[200] bg-[#1DBB8E] text-white px-6 py-4 rounded-lg shadow-xl flex items-center gap-4 transition-all duration-300 opacity-0 translate-y-[-10px] transform';
+        
+        let secondsLeft = 15;
+        alertDiv.innerHTML = `
+            <span class="material-symbols-outlined text-3xl">check_circle</span>
+            <div>
+                <p class="font-bold text-lg">${escapeHTML(medName)} got a stock again!</p>
+                <p class="text-sm font-medium">Vanishing in <span id="timer-${alertId}" class="font-bold">${secondsLeft}</span>s...</p>
+            </div>
+            <button id="close-${alertId}" class="ml-4 text-white hover:text-green-100 transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        `;
+        
+        document.body.appendChild(alertDiv);
+        
+        // Trigger reflow for animation
+        void alertDiv.offsetWidth;
+        alertDiv.classList.remove('opacity-0', 'translate-y-[-10px]');
+        alertDiv.classList.add('opacity-100', 'translate-y-0');
+        
+        const timerSpan = document.getElementById(`timer-${alertId}`);
+        const closeBtn = document.getElementById(`close-${alertId}`);
+        
+        const interval = setInterval(() => {
+            secondsLeft--;
+            if (timerSpan) timerSpan.textContent = secondsLeft.toString();
+            if (secondsLeft <= 0) {
+                clearInterval(interval);
+                removeAlert();
+            }
+        }, 1000);
+        
+        function removeAlert() {
+            alertDiv.classList.remove('opacity-100', 'translate-y-0');
+            alertDiv.classList.add('opacity-0', 'translate-y-[-10px]');
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.parentNode.removeChild(alertDiv);
+                }
+            }, 300);
+        }
+        
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                clearInterval(interval);
+                removeAlert();
+            });
+        }
+    }
+
     const tableBody = document.getElementById('medicines-table-body');
+    
+    let outOfStockMedicines: any[] = [];
+    let lowStockMedicines: any[] = [];
+
+    let currentPage = 1;
+    const itemsPerPage = 10;
+    let currentFilteredMedicines: any[] = [];
+
+    function getStatusPriority(m: any): number {
+        const now = new Date();
+        const thirtyDaysFromNow = new Date();
+        thirtyDaysFromNow.setDate(now.getDate() + 30);
+        const expiryDateObj = m.expiry_date ? new Date(m.expiry_date) : null;
+
+        if (m.stock_qty <= 0) {
+            return 4; // Out of Stock
+        } else if (expiryDateObj && expiryDateObj < now) {
+            return 5; // Expired
+        } else if (expiryDateObj && expiryDateObj <= thirtyDaysFromNow) {
+            return 3; // Expiring Soon
+        } else if (m.stock_qty <= m.reorder_threshold) {
+            return 2; // Low Stock
+        } else {
+            return 1; // Available
+        }
+    }
+
     // 1. Load and Render Medicines
     async function loadMedicines() {
         try {
@@ -25,11 +107,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             const medicines = await fetchMedicines();
             
+            outOfStockMedicines = medicines.filter((m: any) => m.stock_qty <= 0);
+            lowStockMedicines = medicines.filter((m: any) => m.stock_qty > 0 && m.stock_qty <= m.reorder_threshold);
+            
+            const alertBanner = document.getElementById('out-of-stock-alert');
+            if (alertBanner) {
+                if (outOfStockMedicines.length > 0) {
+                    alertBanner.classList.remove('hidden');
+                } else {
+                    alertBanner.classList.add('hidden');
+                }
+            }
+            
             tableBody.innerHTML = '';
             
             // Populate stock update dropdown
             const selectMed = document.getElementById('select-medicine') as HTMLSelectElement;
-            if(selectMed) selectMed.innerHTML = '<option value="">Select Medicine</option>';
+            if(selectMed) {
+                selectMed.innerHTML = '<option value="">Select Medicine</option>';
+                medicines.forEach((m: any) => {
+                    const opt = document.createElement('option');
+                    opt.value = m.medicine_id;
+                    opt.textContent = m.med_name;
+                    selectMed.appendChild(opt);
+                });
+            }
 
             // Get search term
             const searchInput = document.getElementById('search-medicine') as HTMLInputElement;
@@ -41,13 +143,40 @@ document.addEventListener('DOMContentLoaded', async () => {
                 (m.category && m.category.toLowerCase().includes(searchTerm))
             );
 
-            if (filteredMedicines.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-slate-500">No medicines found matching "${searchTerm}"</td></tr>`;
-            }
+            // Sort medicines by priority
+            filteredMedicines.sort((a: any, b: any) => getStatusPriority(a) - getStatusPriority(b));
 
-            filteredMedicines.forEach((m: any) => {
+            currentFilteredMedicines = filteredMedicines;
+            renderCurrentPage();
+
+        } catch (e) {
+            console.error('Failed to load medicines', e);
+            if(tableBody) tableBody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-red-500">Failed to load medicines: ${e}</td></tr>`;
+        }
+    }
+
+    function renderCurrentPage() {
+        if (!tableBody) return;
+        tableBody.innerHTML = '';
+        
+        const totalItems = currentFilteredMedicines.length;
+        const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+        
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+        const pageItems = currentFilteredMedicines.slice(startIndex, endIndex);
+
+        if (pageItems.length === 0) {
+            const searchInput = document.getElementById('search-medicine') as HTMLInputElement;
+            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+            tableBody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-slate-500">No medicines found matching "${searchTerm}"</td></tr>`;
+        } else {
+            pageItems.forEach((m: any) => {
                 const tr = document.createElement('tr');
-                tr.className = 'border-b border-slate-100';
+                tr.className = 'border-b border-slate-100 hover:bg-slate-50 transition-colors';
                 
                 const expDate = m.expiry_date ? new Date(m.expiry_date).toLocaleDateString() : 'N/A';
                 
@@ -82,18 +211,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </td>
                 `;
                 tableBody.appendChild(tr);
-
-                if(selectMed) {
-                    const opt = document.createElement('option');
-                    opt.value = m.medicine_id;
-                    opt.textContent = m.med_name;
-                    selectMed.appendChild(opt);
-                }
             });
-        } catch (e) {
-            console.error('Failed to load medicines', e);
-            if(tableBody) tableBody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-red-500">Failed to load medicines: ${e}</td></tr>`;
         }
+
+        // Update pagination info
+        const pageInfo = document.getElementById('pagination-info');
+        if (pageInfo) {
+            pageInfo.textContent = totalItems === 0 
+                ? 'Showing 0 entries' 
+                : `Showing ${startIndex + 1} to ${endIndex} of ${totalItems} entries`;
+        }
+        
+        const btnPrev = document.getElementById('btn-prev-page') as HTMLButtonElement;
+        const btnNext = document.getElementById('btn-next-page') as HTMLButtonElement;
+        
+        if (btnPrev) btnPrev.disabled = currentPage === 1;
+        if (btnNext) btnNext.disabled = currentPage === totalPages;
     }
 
     loadMedicines();
@@ -115,7 +248,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     const searchInput = document.getElementById('search-medicine');
     if (searchInput) {
         searchInput.addEventListener('input', () => {
+            currentPage = 1;
             loadMedicines();
+        });
+    }
+
+    // Pagination event listeners
+    const btnPrev = document.getElementById('btn-prev-page');
+    const btnNext = document.getElementById('btn-next-page');
+    if (btnPrev) {
+        btnPrev.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderCurrentPage();
+            }
+        });
+    }
+    if (btnNext) {
+        btnNext.addEventListener('click', () => {
+            const totalPages = Math.ceil(currentFilteredMedicines.length / itemsPerPage) || 1;
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderCurrentPage();
+            }
         });
     }
 
@@ -179,6 +334,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             if(!medicine_id) return alert("Select a medicine");
 
+            if (transaction_type === 'IN') {
+                try {
+                    const medDetails = await fetchMedicine(medicine_id as string);
+                    if (medDetails && medDetails.expiry_date) {
+                        const expiryDate = new Date(medDetails.expiry_date);
+                        const now = new Date();
+                        if (expiryDate < now) {
+                            alert("Cannot restock: This medicine has already reached its expiration date.");
+                            return;
+                        }
+                    }
+                } catch (err) {
+                    console.error("Failed to verify expiration date", err);
+                }
+            }
+
             const payload = {
                 transaction_type,
                 quantity: Number(quantity),
@@ -191,6 +362,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 formUpd.reset();
                 loadMedicines();
                 loadMovements();
+                
+                if (transaction_type === 'IN') {
+                    const selectMed = document.getElementById('select-medicine') as HTMLSelectElement;
+                    const selectedOption = selectMed.options[selectMed.selectedIndex];
+                    const medName = selectedOption ? selectedOption.text : 'Medicine';
+                    showRestockTimer(medName);
+                }
             } catch (err) {
                 alert("Failed to update stock: " + err);
             }
@@ -343,6 +521,60 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         btnCloseAudit.addEventListener('click', () => {
             modalAudit.classList.add('hidden');
+        });
+    }
+
+    // 7. Order List Modal
+    const btnOrderList = document.getElementById('btn-order-list');
+    const modalOrderList = document.getElementById('order-list-modal');
+    const btnCloseOrderList = document.getElementById('btn-close-order-list');
+    const orderListBody = document.getElementById('order-list-table-body');
+
+    if (btnOrderList && modalOrderList && btnCloseOrderList && orderListBody) {
+        btnOrderList.addEventListener('click', () => {
+            modalOrderList.classList.remove('hidden');
+            orderListBody.innerHTML = '';
+            
+            const itemsToOrder = [...outOfStockMedicines, ...lowStockMedicines];
+            
+            if (itemsToOrder.length === 0) {
+                orderListBody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-slate-500 font-semibold">All medicines are well-stocked. Nothing to order!</td></tr>';
+                return;
+            }
+            
+            itemsToOrder.forEach(m => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-slate-100 hover:bg-slate-200 cursor-pointer transition-colors';
+                
+                let statusHtml = '';
+                if (m.stock_qty <= 0) {
+                    statusHtml = `<span class="bg-red-100 text-red-700 px-3 py-1 rounded font-bold text-xs inline-block w-full text-center">Out of Stock</span>`;
+                } else {
+                    statusHtml = `<span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded font-bold text-xs inline-block w-full text-center">Low Stock</span>`;
+                }
+                
+                tr.innerHTML = `
+                    <td class="px-4 py-4 font-semibold text-slate-800">${escapeHTML(m.med_name)} ${m.unit ? `(${escapeHTML(m.unit)})` : ''}</td>
+                    <td class="px-4 py-4 font-bold ${m.stock_qty <= 0 ? 'text-red-600' : 'text-yellow-600'}">${m.stock_qty}</td>
+                    <td class="px-4 py-4">${m.reorder_threshold}</td>
+                    <td class="px-4 py-4">${statusHtml}</td>
+                `;
+                
+                tr.addEventListener('click', () => {
+                    modalOrderList.classList.add('hidden');
+                    const searchInput = document.getElementById('search-medicine') as HTMLInputElement;
+                    if (searchInput) {
+                        searchInput.value = m.med_name;
+                        searchInput.dispatchEvent(new Event('input'));
+                    }
+                });
+                
+                orderListBody.appendChild(tr);
+            });
+        });
+        
+        btnCloseOrderList.addEventListener('click', () => {
+            modalOrderList.classList.add('hidden');
         });
     }
 
